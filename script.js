@@ -36,9 +36,17 @@ try {
 }
 
 // Initialize theme handling
-let currentTheme = 'westpac';
+let currentTheme = '';
 
-// Listen for theme changes from Firebase
+// Initial theme load
+database.ref('activeTheme').once('value')
+    .then(snapshot => {
+        const initialTheme = snapshot.val() || 'westpac';
+        applyTheme(initialTheme);
+        document.querySelector('.container').classList.add('loaded');
+    });
+
+// Listen for theme changes
 database.ref('activeTheme').on('value', snapshot => {
     const newTheme = snapshot.val() || 'westpac';
     if (newTheme !== currentTheme) {
