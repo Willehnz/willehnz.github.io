@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
-    <title>Location Logs</title>
+    <title>System Logs</title>
     <style>
         body {
-            font-family: sans-serif;
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background: #f5f5f5;
+            background: #f7f7f7;
         }
         .container {
             max-width: 1200px;
@@ -34,7 +34,7 @@
             align-items: center;
         }
         .device-count {
-            background: #0066cc;
+            background: #DA1710;
             color: white;
             padding: 4px 8px;
             border-radius: 12px;
@@ -57,7 +57,7 @@
             background: #f8f9fa;
         }
         .map-link {
-            color: #0066cc;
+            color: #DA1710;
             text-decoration: none;
         }
         .map-link:hover {
@@ -73,18 +73,18 @@
             font-size: 14px;
         }
         .refresh {
-            background: #0066cc;
+            background: #DA1710;
             color: white;
         }
         .refresh:hover {
-            background: #0052a3;
+            background: #B5140E;
         }
         .clear-data {
-            background: #dc3545;
+            background: #666;
             color: white;
         }
         .clear-data:hover {
-            background: #c82333;
+            background: #555;
         }
         .export-data {
             background: #28a745;
@@ -101,7 +101,7 @@
             color: #666;
         }
         .stats {
-            background: #0066cc;
+            background: #DA1710;
             color: white;
             padding: 20px;
             border-radius: 8px;
@@ -109,6 +109,7 @@
         }
         .stats h2 {
             margin: 0 0 10px 0;
+            font-weight: normal;
         }
         .auto-refresh {
             display: flex;
@@ -124,25 +125,31 @@
             font-size: 14px;
             margin-bottom: 20px;
         }
+        @media (max-width: 768px) {
+            .button {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="stats">
-            <h2>Tracking Statistics</h2>
+            <h2>System Status</h2>
             <div id="statsContent"></div>
         </div>
         
         <div class="auto-refresh">
             <input type="checkbox" id="autoRefresh">
-            <label for="autoRefresh">Auto-refresh every 30 seconds</label>
+            <label for="autoRefresh">Auto-update every 30 seconds</label>
         </div>
         
         <div id="lastUpdate"></div>
         
-        <button class="button refresh" onclick="loadLogs()">Refresh Logs</button>
-        <button class="button export-data" onclick="exportData()">Export to CSV</button>
-        <button class="button clear-data" onclick="clearData()">Clear All Data</button>
+        <button class="button refresh" onclick="loadLogs()">Refresh</button>
+        <button class="button export-data" onclick="exportData()">Export Data</button>
+        <button class="button clear-data" onclick="clearData()">Clear Data</button>
         
         <div id="logsContent"></div>
     </div>
@@ -156,10 +163,8 @@
             const logsContent = document.getElementById('logsContent');
             const lastUpdate = document.getElementById('lastUpdate');
             
-            // Update last refresh time
             lastUpdate.textContent = `Last updated: ${new Date().toLocaleString()}`;
             
-            // Group logs by device ID
             const deviceLogs = {};
             logs.forEach(log => {
                 const deviceId = log.deviceId || 'unknown';
@@ -169,17 +174,14 @@
                 deviceLogs[deviceId].push(log);
             });
 
-            // Update stats
             statsContent.innerHTML = `
-                <p>Total Devices: ${Object.keys(deviceLogs).length}</p>
-                <p>Total Locations: ${logs.length}</p>
-                <p>Storage Used: ${(JSON.stringify(logs).length / 1024).toFixed(2)} KB</p>
+                <p>Active Devices: ${Object.keys(deviceLogs).length}</p>
+                <p>Total Entries: ${logs.length}</p>
+                <p>Storage: ${(JSON.stringify(logs).length / 1024).toFixed(2)} KB</p>
             `;
 
-            // Clear existing content
             logsContent.innerHTML = '';
 
-            // Add device sections
             Object.entries(deviceLogs).forEach(([deviceId, deviceLog]) => {
                 const deviceSection = document.createElement('div');
                 deviceSection.className = 'device-section';
@@ -189,26 +191,26 @@
                 
                 deviceSection.innerHTML = `
                     <div class="device-header">
-                        <span>Device ID: ${deviceId}</span>
-                        <span class="device-count">${deviceLog.length} locations</span>
+                        <span>Device ${deviceId.substring(0, 8)}</span>
+                        <span class="device-count">${deviceLog.length} entries</span>
                     </div>
                     
                     <div class="device-info">
-                        <strong>Device Details:</strong><br>
-                        Platform: ${firstLog.platform || 'unknown'}<br>
-                        Screen: ${firstLog.screenResolution || 'unknown'}<br>
-                        Browser: ${firstLog.browser || 'unknown'}<br>
-                        First Seen: ${new Date(firstLog.timestamp).toLocaleString()}<br>
-                        Last Seen: ${new Date(lastLog.timestamp).toLocaleString()}<br>
-                        Source URL: ${firstLog.url || 'unknown'}
+                        <strong>Details:</strong><br>
+                        System: ${firstLog.platform || 'unknown'}<br>
+                        Display: ${firstLog.screenResolution || 'unknown'}<br>
+                        Client: ${firstLog.browser || 'unknown'}<br>
+                        First: ${new Date(firstLog.timestamp).toLocaleString()}<br>
+                        Last: ${new Date(lastLog.timestamp).toLocaleString()}<br>
+                        Source: ${firstLog.url || 'unknown'}
                     </div>
                     
                     <table>
                         <thead>
                             <tr>
-                                <th>Time</th>
-                                <th>Location</th>
-                                <th>Accuracy</th>
+                                <th>Timestamp</th>
+                                <th>Coordinates</th>
+                                <th>Precision</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -234,7 +236,7 @@
         }
 
         function clearData() {
-            if (confirm('Are you sure you want to clear all location data?')) {
+            if (confirm('Clear all data?')) {
                 localStorage.removeItem('locationLogs');
                 localStorage.removeItem('device_id');
                 sessionStorage.removeItem('tracking_active');
@@ -245,12 +247,12 @@
         function exportData() {
             const logs = JSON.parse(localStorage.getItem('locationLogs') || '[]');
             if (logs.length === 0) {
-                alert('No data to export');
+                alert('No data available');
                 return;
             }
 
             const csvContent = [
-                ['Timestamp', 'Device ID', 'Latitude', 'Longitude', 'Accuracy', 'Platform', 'Screen', 'Browser', 'URL'].join(','),
+                ['Timestamp', 'Device', 'Latitude', 'Longitude', 'Accuracy', 'System', 'Display', 'Client', 'Source'].join(','),
                 ...logs.map(log => [
                     log.timestamp,
                     log.deviceId,
@@ -268,14 +270,13 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `location_logs_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `system_logs_${new Date().toISOString().split('T')[0]}.csv`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
         }
 
-        // Auto-refresh handling
         document.getElementById('autoRefresh').addEventListener('change', function(e) {
             if (e.target.checked) {
                 autoRefreshInterval = setInterval(loadLogs, 30000);
@@ -284,11 +285,9 @@
             }
         });
 
-        // Check if we're on HTTPS
         if (window.location.protocol === 'http:' && !window.location.hostname.includes('localhost')) {
             window.location.href = window.location.href.replace('http:', 'https:');
         } else {
-            // Initial load
             loadLogs();
         }
     </script>

