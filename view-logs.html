@@ -193,9 +193,16 @@
                     const logsTable = document.getElementById('logsTable');
                     logsTable.innerHTML = '';
                     
+                    // Get the latest location for initial map view
+                    let latestLocation = null;
                     snapshot.forEach(childSnapshot => {
                         const data = childSnapshot.val();
                         const locationKey = childSnapshot.key;
+                        
+                        // Keep track of latest location based on timestamp
+                        if (!latestLocation || new Date(data.timestamp) > new Date(latestLocation.timestamp)) {
+                            latestLocation = data;
+                        }
                         
                         // Add table row
                         const row = logsTable.insertRow();
@@ -253,6 +260,11 @@
                             marker.openPopup();
                         });
                     });
+
+                    // Set map view to latest location
+                    if (latestLocation) {
+                        map.setView([latestLocation.latitude, latestLocation.longitude], 13);
+                    }
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
