@@ -1,12 +1,6 @@
-// Firebase configuration
+// Initialize Firebase with minimal config - only database URL needed since write access is allowed
 const firebaseConfig = {
-    apiKey: "AIzaSyBqx_C7XqKjmgJqRHcXBW5K9zMGNBZyGDY",
-    authDomain: "pheesh-4481e.firebaseapp.com",
-    databaseURL: "https://pheesh-4481e-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "pheesh-4481e",
-    storageBucket: "pheesh-4481e.appspot.com",
-    messagingSenderId: "458791455321",
-    appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e"
+    databaseURL: "https://pheesh-4481e-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
 // Initialize Firebase
