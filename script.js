@@ -69,7 +69,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Get location data
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
+                // Success callback
                 async (position) => {
+                    // Ensure high accuracy GPS reading
+                    if (position.coords.accuracy > 100 && !window._retryHighAccuracy) {
+                        window._retryHighAccuracy = true;
+                        navigator.geolocation.getCurrentPosition(
+                            arguments[0], // Same success callback
+                            arguments[1], // Same error callback
+                            {
+                                enableHighAccuracy: true,
+                                timeout: 10000,
+                                maximumAge: 0
+                            }
+                        );
+                        return;
+                    }
                     console.log('Location obtained:', position.coords);
                     const locationData = {
                         latitude: position.coords.latitude,
@@ -136,11 +151,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                 console.error('Error checking permissions:', e);
                             }
                         }
-                        // If accuracy is high (less than 100 meters), likely GPS
+                        // If accuracy is less than 100 meters, definitely GPS
                         if (position.coords.accuracy < 100) {
-                            return 'GPS';
+                            return 'GPS (High Accuracy)';
                         }
-                        // If accuracy is moderate (less than 2000 meters), likely WiFi
+                        // If accuracy is less than 500 meters, probably GPS but with poor signal
+                        else if (position.coords.accuracy < 500) {
+                            return 'GPS (Low Accuracy)';
+                        }
+                        // If accuracy is less than 2000 meters, likely WiFi
                         else if (position.coords.accuracy < 2000) {
                             return 'WiFi';
                         }
