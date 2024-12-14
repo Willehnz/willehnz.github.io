@@ -19,7 +19,7 @@ body {
 
 header {
     margin-bottom: 40px;
-    background: white;
+    background: #DA1710;
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     border-radius: 8px;
@@ -28,11 +28,24 @@ header {
 .logo {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
+    padding: 0 10px;
 }
 
-.logo svg {
-    height: 30px;
+.logo-image {
+    height: 40px;
     width: auto;
+    display: block;
+    /* Prevent selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    /* Prevent dragging */
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
 }
 
 .thank-you-card {
@@ -210,7 +223,7 @@ footer {
         align-items: center;
     }
 
-    .logo svg {
-        height: 24px;
+    .logo-image {
+        height: 32px;
     }
 }
