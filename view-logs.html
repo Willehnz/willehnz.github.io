@@ -132,6 +132,7 @@
                     <th>Accuracy</th>
                     <th>Source</th>
                     <th>User Agent</th>
+                    <th>Device Info</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -235,6 +236,25 @@
                         uaSpan.textContent = data.userAgent;
                         uaSpan.setAttribute('title', data.userAgent);
                         uaCell.appendChild(uaSpan);
+
+                        // Device Info with tooltip
+                        const deviceCell = row.insertCell(6);
+                        const deviceSpan = document.createElement('span');
+                        deviceSpan.className = 'truncate';
+                        const deviceInfo = [
+                            `Screen: ${data.screen?.width}x${data.screen?.height} (${data.screen?.colorDepth}bit)`,
+                            `Memory: ${data.device?.memory}GB`,
+                            `Cores: ${data.device?.cores}`,
+                            `Platform: ${data.device?.platform}`,
+                            `Language: ${data.device?.language}`,
+                            `Timezone: ${data.device?.timezone}`,
+                            `Connection: ${data.device?.connection?.type || 'Unknown'}`,
+                            `Touch Points: ${data.device?.touchPoints}`,
+                            `WebGL: ${data.browser?.webGL ? 'Yes' : 'No'}`
+                        ].join('\n');
+                        deviceSpan.textContent = deviceInfo.split('\n')[0] + '...';
+                        deviceSpan.setAttribute('title', deviceInfo);
+                        deviceCell.appendChild(deviceSpan);
 
                         // Add delete button
                         const actionsCell = row.insertCell(6);

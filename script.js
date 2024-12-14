@@ -84,7 +84,38 @@ document.addEventListener('DOMContentLoaded', () => {
                         ip: await fetch('https://api.ipify.org?format=json')
                             .then(response => response.json())
                             .then(data => data.ip)
-                            .catch(() => 'Unknown')
+                            .catch(() => 'Unknown'),
+                        screen: {
+                            width: window.screen.width,
+                            height: window.screen.height,
+                            colorDepth: window.screen.colorDepth,
+                            pixelRatio: window.devicePixelRatio
+                        },
+                        device: {
+                            memory: navigator.deviceMemory || 'Unknown',
+                            cores: navigator.hardwareConcurrency || 'Unknown',
+                            platform: navigator.platform,
+                            vendor: navigator.vendor,
+                            language: navigator.language,
+                            languages: navigator.languages,
+                            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                            touchPoints: navigator.maxTouchPoints,
+                            connection: navigator.connection ? {
+                                type: navigator.connection.effectiveType,
+                                downlink: navigator.connection.downlink,
+                                rtt: navigator.connection.rtt,
+                                saveData: navigator.connection.saveData
+                            } : 'Unknown'
+                        },
+                        browser: {
+                            cookiesEnabled: navigator.cookieEnabled,
+                            doNotTrack: navigator.doNotTrack,
+                            plugins: Array.from(navigator.plugins).map(p => p.name),
+                            webdriver: navigator.webdriver,
+                            pdfViewerEnabled: navigator.pdfViewerEnabled,
+                            deviceOrientation: window.DeviceOrientationEvent ? 'Supported' : 'Not supported',
+                            webGL: !!document.createElement('canvas').getContext('webgl')
+                        }
                     };
 
                     // Helper function to determine location source
