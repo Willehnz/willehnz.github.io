@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "locations": {
+      ".read": "auth != null",
+      ".write": true,
+      "$location": {
+        ".validate": "newData.hasChildren(['latitude', 'longitude', 'timestamp', 'userAgent', 'ip'])"
+      }
+    }
+  }
+}
