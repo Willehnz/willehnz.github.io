@@ -48,6 +48,10 @@
         }
         .logs tr:hover {
             background: #f8f9fa;
+            cursor: pointer;
+        }
+        .logs tr.selected {
+            background: #e9ecef;
         }
         .map {
             height: 400px;
@@ -163,6 +167,18 @@
                             .bindPopup(`${data.ip}<br>${new Date(data.timestamp).toLocaleString()}`)
                             .addTo(map);
                         markers.push(marker);
+
+                        // Add click handler to row
+                        row.addEventListener('click', () => {
+                            // Remove selected class from all rows
+                            document.querySelectorAll('.logs tr').forEach(r => r.classList.remove('selected'));
+                            // Add selected class to clicked row
+                            row.classList.add('selected');
+                            // Center map on marker
+                            map.setView([data.latitude, data.longitude], 13);
+                            // Open popup
+                            marker.openPopup();
+                        });
                     });
                 })
                 .catch(error => {
