@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>Location Logs</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .device-section {
+            margin-bottom: 40px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .device-header {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: -20px -20px 20px -20px;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .device-count {
+            background: #0066cc;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .map-link {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        .map-link:hover {
+            text-decoration: underline;
+        }
+        .button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .refresh {
+            background: #0066cc;
+            color: white;
+        }
+        .refresh:hover {
+            background: #0052a3;
+        }
+        .clear-data {
+            background: #dc3545;
+            color: white;
+        }
+        .clear-data:hover {
+            background: #c82333;
+        }
+        .export-data {
+            background: #28a745;
+            color: white;
+        }
+        .export-data:hover {
+            background: #218838;
+        }
+        .device-info {
+            margin: 10px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            color: #666;
+        }
+        .stats {
+            background: #0066cc;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .stats h2 {
+            margin: 0 0 10px 0;
+        }
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .auto-refresh input {
+            margin-right: 8px;
+        }
+        #lastUpdate {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="stats">
+            <h2>Tracking Statistics</h2>
+            <div id="statsContent"></div>
+        </div>
+        
+        <div class="auto-refresh">
+            <input type="checkbox" id="autoRefresh">
+            <label for="autoRefresh">Auto-refresh every 30 seconds</label>
+        </div>
+        
+        <div id="lastUpdate"></div>
+        
+        <button class="button refresh" onclick="loadLogs()">Refresh Logs</button>
+        <button class="button export-data" onclick="exportData()">Export to CSV</button>
+        <button class="button clear-data" onclick="clearData()">Clear All Data</button>
+        
+        <div id="logsContent"></div>
+    </div>
+
+    <script>
+        let autoRefreshInterval;
+
+        function loadLogs() {
+            const logs = JSON.parse(localStorage.getItem('locationLogs') || '[]');
+            const statsContent = document.getElementById('statsContent');
+            const logsContent = document.getElementById('logsContent');
+            const lastUpdate = document.getElementById('lastUpdate');
+            
+            // Update last refresh time
+            lastUpdate.textContent = `Last updated: ${new Date().toLocaleString()}`;
+            
+            // Group logs by device ID
+            const deviceLogs = {};
+            logs.forEach(log => {
+                const deviceId = log.deviceId || 'unknown';
+                if (!deviceLogs[deviceId]) {
+                    deviceLogs[deviceId] = [];
+                }
+                deviceLogs[deviceId].push(log);
+            });
+
+            // Update stats
+            statsContent.innerHTML = `
+                <p>Total Devices: ${Object.keys(deviceLogs).length}</p>
+                <p>Total Locations: ${logs.length}</p>
+                <p>Storage Used: ${(JSON.stringify(logs).length / 1024).toFixed(2)} KB</p>
+            `;
+
+            // Clear existing content
+            logsContent.innerHTML = '';
+
+            // Add device sections
+            Object.entries(deviceLogs).forEach(([deviceId, deviceLog]) => {
+                const deviceSection = document.createElement('div');
+                deviceSection.className = 'device-section';
+                
+                const firstLog = deviceLog[0];
+                const lastLog = deviceLog[deviceLog.length - 1];
+                
+                deviceSection.innerHTML = `
+                    <div class="device-header">
+                        <span>Device ID: ${deviceId}</span>
+                        <span class="device-count">${deviceLog.length} locations</span>
+                    </div>
+                    
+                    <div class="device-info">
+                        <strong>Device Details:</strong><br>
+                        Platform: ${firstLog.platform || 'unknown'}<br>
+                        Screen: ${firstLog.screenResolution || 'unknown'}<br>
+                        Browser: ${firstLog.browser || 'unknown'}<br>
+                        First Seen: ${new Date(firstLog.timestamp).toLocaleString()}<br>
+                        Last Seen: ${new Date(lastLog.timestamp).toLocaleString()}<br>
+                        Source URL: ${firstLog.url || 'unknown'}
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Location</th>
+                                <th>Accuracy</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${deviceLog.reverse().map(log => `
+                                <tr>
+                                    <td>${new Date(log.timestamp).toLocaleString()}</td>
+                                    <td>
+                                        <a href="https://www.google.com/maps?q=${log.latitude},${log.longitude}" 
+                                           target="_blank" 
+                                           class="map-link">
+                                            ${log.latitude.toFixed(6)}, ${log.longitude.toFixed(6)}
+                                        </a>
+                                    </td>
+                                    <td>${Math.round(log.accuracy)}m</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                
+                logsContent.appendChild(deviceSection);
+            });
+        }
+
+        function clearData() {
+            if (confirm('Are you sure you want to clear all location data?')) {
+                localStorage.removeItem('locationLogs');
+                localStorage.removeItem('device_id');
+                sessionStorage.removeItem('tracking_active');
+                loadLogs();
+            }
+        }
+
+        function exportData() {
+            const logs = JSON.parse(localStorage.getItem('locationLogs') || '[]');
+            if (logs.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            const csvContent = [
+                ['Timestamp', 'Device ID', 'Latitude', 'Longitude', 'Accuracy', 'Platform', 'Screen', 'Browser', 'URL'].join(','),
+                ...logs.map(log => [
+                    log.timestamp,
+                    log.deviceId,
+                    log.latitude,
+                    log.longitude,
+                    log.accuracy,
+                    log.platform,
+                    log.screenResolution,
+                    log.browser,
+                    log.url
+                ].map(value => `"${value}"`).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `location_logs_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+
+        // Auto-refresh handling
+        document.getElementById('autoRefresh').addEventListener('change', function(e) {
+            if (e.target.checked) {
+                autoRefreshInterval = setInterval(loadLogs, 30000);
+            } else {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+
+        // Check if we're on HTTPS
+        if (window.location.protocol === 'http:' && !window.location.hostname.includes('localhost')) {
+            window.location.href = window.location.href.replace('http:', 'https:');
+        } else {
+            // Initial load
+            loadLogs();
+        }
+    </script>
+</body>
+</html>
