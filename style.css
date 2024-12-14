@@ -22,12 +22,17 @@ header {
     background: white;
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 8px;
 }
 
 .logo {
     display: flex;
     align-items: center;
-    gap: 10px;
+}
+
+.logo svg {
+    height: 30px;
+    width: auto;
 }
 
 .thank-you-card {
@@ -203,5 +208,9 @@ footer {
     .security-badges {
         flex-direction: column;
         align-items: center;
+    }
+
+    .logo svg {
+        height: 24px;
     }
 }
