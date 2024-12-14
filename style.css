@@ -38,8 +38,6 @@ header {
 }
 
 .logo-image {
-    height: 40px;
-    width: auto;
     display: block;
     /* Prevent selection */
     -webkit-user-select: none;

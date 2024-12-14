@@ -232,3 +232,32 @@ footer {
         height: 32px;
     }
 }
+/* Moving existing styles to Westpac theme */
+.logo-image {
+    height: 40px;
+    width: auto;
+}
+
+h1 {
+    color: #DA1710;
+}
+
+.checkmark {
+    color: #DA1710;
+}
+
+.primary-button {
+    background: #DA1710;
+}
+
+.primary-button:hover {
+    background: #B5140E;
+}
+
+.info-box p {
+    color: #DA1710;
+}
+
+.footer-links a {
+    color: #DA1710;
+}

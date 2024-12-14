@@ -1,0 +1,29 @@
+/* Test Bank Theme */
+.logo-image {
+    height: 45px;
+    width: auto;
+}
+
+h1 {
+    color: #4CAF50;
+}
+
+.checkmark {
+    color: #4CAF50;
+}
+
+.primary-button {
+    background: #4CAF50;
+}
+
+.primary-button:hover {
+    background: #388E3C;
+}
+
+.info-box p {
+    color: #4CAF50;
+}
+
+.footer-links a {
+    color: #4CAF50;
+}

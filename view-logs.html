@@ -157,11 +157,20 @@
         <div class="container">
         <div class="header">
             <h1>Location Logs</h1>
-            <div style="display: flex; align-items: center;">
-                <button class="refresh-btn" onclick="refreshData()">Refresh Data</button>
-                <div class="auto-refresh">
-                    <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
-                    <label for="autoRefresh">Auto-refresh (30s)</label>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div>
+                    <button class="refresh-btn" onclick="refreshData()">Refresh Data</button>
+                    <div class="auto-refresh">
+                        <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
+                        <label for="autoRefresh">Auto-refresh (30s)</label>
+                    </div>
+                </div>
+                <div>
+                    <label for="themeSelect">Active Theme: </label>
+                    <select id="themeSelect" onchange="updateTheme(this.value)">
+                        <option value="westpac">Westpac</option>
+                        <option value="test">Test Bank</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -365,6 +374,23 @@
         }
 
         // Initialize map and load data will happen after successful login
+    </script>
+    <script src="themes/config.js"></script>
+    <script>
+        function updateTheme(themeName) {
+            if (confirm('Are you sure you want to change the active theme?')) {
+                database.ref('activeTheme').set(themeName)
+                    .then(() => alert('Theme updated successfully'))
+                    .catch(error => alert('Error updating theme: ' + error.message));
+            }
+        }
+
+        // Load current theme on startup
+        database.ref('activeTheme').once('value')
+            .then(snapshot => {
+                const activeTheme = snapshot.val() || 'westpac';
+                document.getElementById('themeSelect').value = activeTheme;
+            });
     </script>
 </body>
 </html>
