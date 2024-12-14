@@ -75,13 +75,29 @@
         .refresh-btn:hover {
             background: #B5140E;
         }
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 10px;
+        }
+        .auto-refresh input {
+            width: 16px;
+            height: 16px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>Location Logs</h1>
-            <button class="refresh-btn" onclick="refreshData()">Refresh Data</button>
+            <div style="display: flex; align-items: center;">
+                <button class="refresh-btn" onclick="refreshData()">Refresh Data</button>
+                <div class="auto-refresh">
+                    <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
+                    <label for="autoRefresh">Auto-refresh (30s)</label>
+                </div>
+            </div>
         </div>
         
         <div class="map">
@@ -130,6 +146,17 @@
 
         let map;
         let markers = [];
+        let autoRefreshInterval;
+
+        function toggleAutoRefresh() {
+            const autoRefreshCheckbox = document.getElementById('autoRefresh');
+            if (autoRefreshCheckbox.checked) {
+                // Refresh every 30 seconds
+                autoRefreshInterval = setInterval(refreshData, 30000);
+            } else {
+                clearInterval(autoRefreshInterval);
+            }
+        }
 
         function initMap() {
             // Initialize Leaflet map
