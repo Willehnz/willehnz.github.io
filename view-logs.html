@@ -110,6 +110,8 @@
                     <th>Timestamp</th>
                     <th>IP Address</th>
                     <th>Location</th>
+                    <th>Accuracy</th>
+                    <th>Source</th>
                     <th>User Agent</th>
                 </tr>
             </thead>
@@ -187,7 +189,9 @@
                         row.insertCell(0).textContent = new Date(data.timestamp).toLocaleString();
                         row.insertCell(1).textContent = data.ip;
                         row.insertCell(2).textContent = `${data.latitude}, ${data.longitude}`;
-                        row.insertCell(3).textContent = data.userAgent;
+                        row.insertCell(3).textContent = data.accuracy ? `±${Math.round(data.accuracy)}m` : 'Unknown';
+                        row.insertCell(4).textContent = data.locationSource || 'Unknown';
+                        row.insertCell(5).textContent = data.userAgent;
 
                         // Add marker to map
                         const marker = L.marker([data.latitude, data.longitude])

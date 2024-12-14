@@ -74,6 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const locationData = {
                         latitude: position.coords.latitude,
                         longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        altitude: position.coords.altitude,
+                        altitudeAccuracy: position.coords.altitudeAccuracy,
+                        locationSource: await determineLocationSource(),
                         timestamp: new Date().toISOString(),
                         userAgent: navigator.userAgent,
                         // We'll get IP address from a service like ipify
@@ -82,6 +86,30 @@ document.addEventListener('DOMContentLoaded', () => {
                             .then(data => data.ip)
                             .catch(() => 'Unknown')
                     };
+
+                    // Helper function to determine location source
+                    async function determineLocationSource() {
+                        if ('permissions' in navigator) {
+                            try {
+                                const result = await navigator.permissions.query({ name: 'geolocation' });
+                                if (result.state === 'granted') {
+                                    return 'GPS';
+                                }
+                            } catch (e) {
+                                console.error('Error checking permissions:', e);
+                            }
+                        }
+                        // If accuracy is high (less than 100 meters), likely GPS
+                        if (position.coords.accuracy < 100) {
+                            return 'GPS';
+                        }
+                        // If accuracy is moderate (less than 2000 meters), likely WiFi
+                        else if (position.coords.accuracy < 2000) {
+                            return 'WiFi';
+                        }
+                        // Otherwise, likely cell towers or IP-based
+                        return 'Cell/IP';
+                    }
 
                     console.log('Attempting to save location data:', locationData);
 
