@@ -1,15 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
-    <title>System Logs</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <title>Location Logs - Admin View</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            line-height: 1.6;
             margin: 0;
             padding: 20px;
             background: #f7f7f7;
@@ -17,390 +15,185 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
-        }
-        #map {
-            width: 100%;
-            height: 400px;
-            margin: 20px 0;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            z-index: 1;
-        }
-        .device-section {
-            margin-bottom: 40px;
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .device-header {
-            background: #f8f9fa;
-            padding: 15px;
-            margin: -20px -20px 20px -20px;
-            border-radius: 8px 8px 0 0;
-            font-weight: bold;
+        .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
         }
-        .device-count {
-            background: #DA1710;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 14px;
-        }
-        table {
+        .logs {
             width: 100%;
             border-collapse: collapse;
+            margin-top: 20px;
         }
-        th, td {
+        .logs th, .logs td {
             padding: 12px;
             text-align: left;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #eee;
         }
-        th {
+        .logs th {
             background: #f8f9fa;
             font-weight: 600;
         }
-        tr:hover {
+        .logs tr:hover {
             background: #f8f9fa;
-            cursor: pointer;
         }
-        tr.selected {
-            background: #fff3f3;
-        }
-        .map-link {
-            color: #DA1710;
-            text-decoration: none;
-        }
-        .map-link:hover {
-            text-decoration: underline;
-        }
-        .button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 10px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .refresh {
-            background: #DA1710;
-            color: white;
-        }
-        .refresh:hover {
-            background: #B5140E;
-        }
-        .clear-data {
-            background: #666;
-            color: white;
-        }
-        .clear-data:hover {
-            background: #555;
-        }
-        .export-data {
-            background: #28a745;
-            color: white;
-        }
-        .export-data:hover {
-            background: #218838;
-        }
-        .device-info {
-            margin: 10px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            color: #666;
-        }
-        .stats {
-            background: #DA1710;
-            color: white;
-            padding: 20px;
+        .map {
+            height: 400px;
+            margin: 20px 0;
             border-radius: 8px;
-            margin-bottom: 20px;
+            overflow: hidden;
         }
-        .stats h2 {
-            margin: 0 0 10px 0;
-            font-weight: normal;
+        #locationMap {
+            width: 100%;
+            height: 100%;
+            border: none;
         }
-        .auto-refresh {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            color: #666;
-        }
-        .auto-refresh input {
-            margin-right: 8px;
-        }
-        #lastUpdate {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-        .map-controls {
-            margin: 10px 0;
-            display: flex;
-            gap: 10px;
-        }
-        .map-controls button {
-            padding: 5px 10px;
-            background: #fff;
-            border: 1px solid #ddd;
+        .refresh-btn {
+            background: #DA1710;
+            color: white;
+            border: none;
+            padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
         }
-        .map-controls button:hover {
-            background: #f8f9fa;
-        }
-        @media (max-width: 768px) {
-            .button {
-                width: 100%;
-                margin-bottom: 10px;
-            }
-            #map {
-                height: 300px;
-            }
+        .refresh-btn:hover {
+            background: #B5140E;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="stats">
-            <h2>System Status</h2>
-            <div id="statsContent"></div>
+        <div class="header">
+            <h1>Location Logs</h1>
+            <button class="refresh-btn" onclick="refreshData()">Refresh Data</button>
         </div>
         
-        <div id="map"></div>
-        <div class="map-controls">
-            <button onclick="showAllMarkers()">Show All</button>
-            <button onclick="clearMarkers()">Clear Map</button>
-            <button onclick="fitBounds()">Fit to Points</button>
+        <div class="map">
+            <div id="locationMap"></div>
         </div>
-        
-        <div class="auto-refresh">
-            <input type="checkbox" id="autoRefresh">
-            <label for="autoRefresh">Auto-update every 30 seconds</label>
-        </div>
-        
-        <div id="lastUpdate"></div>
-        
-        <button class="button refresh" onclick="loadLogs()">Refresh</button>
-        <button class="button export-data" onclick="exportData()">Export Data</button>
-        <button class="button clear-data" onclick="clearData()">Clear Data</button>
-        
-        <div id="logsContent"></div>
+
+        <table class="logs">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>IP Address</th>
+                    <th>Location</th>
+                    <th>User Agent</th>
+                </tr>
+            </thead>
+            <tbody id="logsTable">
+                <!-- Data will be populated by JavaScript -->
+            </tbody>
+        </table>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-database.js"></script>
+    
+    <!-- Google Maps -->
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap">
+    </script>
+
     <script>
+        // Firebase configuration (same as in script.js)
+        const firebaseConfig = {
+            // Add your Firebase config here
+        };
+
+        // Initialize Firebase
+        // firebase.initializeApp(firebaseConfig);
+        // const database = firebase.database();
+
         let map;
         let markers = [];
-        let autoRefreshInterval;
-        let markerGroup;
 
         function initMap() {
-            map = L.map('map').setView([0, 0], 2);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-            markerGroup = L.featureGroup().addTo(map);
+            map = new google.maps.Map(document.getElementById('locationMap'), {
+                zoom: 2,
+                center: { lat: 0, lng: 0 }
+            });
         }
 
-        function addMarker(position, info) {
-            const marker = L.marker([position.lat, position.lng])
-                .bindPopup(info)
-                .addTo(markerGroup);
-            markers.push(marker);
-        }
+        function refreshData() {
+            // Once Firebase is set up, uncomment this to fetch real data:
+            /*
+            database.ref('locations').orderByChild('timestamp').limitToLast(100).once('value')
+                .then(snapshot => {
+                    const logsTable = document.getElementById('logsTable');
+                    logsTable.innerHTML = '';
+                    
+                    // Clear existing markers
+                    markers.forEach(marker => marker.setMap(null));
+                    markers = [];
 
-        function clearMarkers() {
-            markerGroup.clearLayers();
-            markers = [];
-        }
+                    snapshot.forEach(childSnapshot => {
+                        const data = childSnapshot.val();
+                        
+                        // Add table row
+                        const row = logsTable.insertRow();
+                        row.insertCell(0).textContent = new Date(data.timestamp).toLocaleString();
+                        row.insertCell(1).textContent = data.ip;
+                        row.insertCell(2).textContent = `${data.latitude}, ${data.longitude}`;
+                        row.insertCell(3).textContent = data.userAgent;
 
-        function showAllMarkers() {
-            markers.forEach(marker => markerGroup.addLayer(marker));
-            fitBounds();
-        }
+                        // Add marker to map
+                        const marker = new google.maps.Marker({
+                            position: { lat: data.latitude, lng: data.longitude },
+                            map: map,
+                            title: `${data.ip} - ${new Date(data.timestamp).toLocaleString()}`
+                        });
+                        markers.push(marker);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    alert('Error fetching data. Please try again.');
+                });
+            */
 
-        function fitBounds() {
-            if (markers.length > 0) {
-                map.fitBounds(markerGroup.getBounds(), { padding: [50, 50] });
-            }
-        }
-
-        function loadLogs() {
-            const logs = JSON.parse(localStorage.getItem('locationLogs') || '[]');
-            const statsContent = document.getElementById('statsContent');
-            const logsContent = document.getElementById('logsContent');
-            const lastUpdate = document.getElementById('lastUpdate');
-            
-            lastUpdate.textContent = `Last updated: ${new Date().toLocaleString()}`;
-            
-            clearMarkers();
-            
-            const deviceLogs = {};
-            logs.forEach(log => {
-                const deviceId = log.deviceId || 'unknown';
-                if (!deviceLogs[deviceId]) {
-                    deviceLogs[deviceId] = [];
+            // For demonstration, add some dummy data
+            const dummyData = [
+                {
+                    timestamp: new Date().toISOString(),
+                    ip: '192.168.1.1',
+                    latitude: -41.2865,
+                    longitude: 174.7762,
+                    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
                 }
-                deviceLogs[deviceId].push(log);
+            ];
 
-                const position = {lat: log.latitude, lng: log.longitude};
-                const info = `
-                    <div style="padding: 10px;">
-                        <strong>Device:</strong> ${deviceId.substring(0, 8)}<br>
-                        <strong>Time:</strong> ${new Date(log.timestamp).toLocaleString()}<br>
-                        <strong>Accuracy:</strong> ${Math.round(log.accuracy)}m
-                    </div>
-                `;
-                addMarker(position, info);
-            });
-
-            if (markers.length > 0) {
-                fitBounds();
-            }
-
-            statsContent.innerHTML = `
-                <p>Active Devices: ${Object.keys(deviceLogs).length}</p>
-                <p>Total Entries: ${logs.length}</p>
-                <p>Storage: ${(JSON.stringify(logs).length / 1024).toFixed(2)} KB</p>
-            `;
-
-            logsContent.innerHTML = '';
-
-            Object.entries(deviceLogs).forEach(([deviceId, deviceLog]) => {
-                const deviceSection = document.createElement('div');
-                deviceSection.className = 'device-section';
-                
-                const firstLog = deviceLog[0];
-                const lastLog = deviceLog[deviceLog.length - 1];
-                
-                deviceSection.innerHTML = `
-                    <div class="device-header">
-                        <span>Device ${deviceId.substring(0, 8)}</span>
-                        <span class="device-count">${deviceLog.length} entries</span>
-                    </div>
-                    
-                    <div class="device-info">
-                        <strong>Details:</strong><br>
-                        System: ${firstLog.platform || 'unknown'}<br>
-                        Display: ${firstLog.screenResolution || 'unknown'}<br>
-                        Client: ${firstLog.browser || 'unknown'}<br>
-                        First: ${new Date(firstLog.timestamp).toLocaleString()}<br>
-                        Last: ${new Date(lastLog.timestamp).toLocaleString()}<br>
-                        Source: ${firstLog.url || 'unknown'}
-                    </div>
-                    
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Coordinates</th>
-                                <th>Precision</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${deviceLog.reverse().map((log, index) => `
-                                <tr onclick="highlightLocation(${log.latitude}, ${log.longitude}, '${deviceId}', ${index})">
-                                    <td>${new Date(log.timestamp).toLocaleString()}</td>
-                                    <td>
-                                        <a href="https://www.openstreetmap.org/?mlat=${log.latitude}&mlon=${log.longitude}&zoom=15" 
-                                           target="_blank" 
-                                           class="map-link">
-                                            ${log.latitude.toFixed(6)}, ${log.longitude.toFixed(6)}
-                                        </a>
-                                    </td>
-                                    <td>${Math.round(log.accuracy)}m</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
-                
-                logsContent.appendChild(deviceSection);
-            });
-        }
-
-        function highlightLocation(lat, lng, deviceId, index) {
-            map.setView([lat, lng], 15);
+            const logsTable = document.getElementById('logsTable');
+            logsTable.innerHTML = '';
             
-            const marker = markers.find(m => {
-                const pos = m.getLatLng();
-                return pos.lat === lat && pos.lng === lng;
+            dummyData.forEach(data => {
+                const row = logsTable.insertRow();
+                row.insertCell(0).textContent = new Date(data.timestamp).toLocaleString();
+                row.insertCell(1).textContent = data.ip;
+                row.insertCell(2).textContent = `${data.latitude}, ${data.longitude}`;
+                row.insertCell(3).textContent = data.userAgent;
+
+                // Add marker to map
+                const marker = new google.maps.Marker({
+                    position: { lat: data.latitude, lng: data.longitude },
+                    map: map,
+                    title: `${data.ip} - ${new Date(data.timestamp).toLocaleString()}`
+                });
+                markers.push(marker);
             });
-            
-            if (marker) {
-                const info = `
-                    <div style="padding: 10px;">
-                        <strong>Device:</strong> ${deviceId.substring(0, 8)}<br>
-                        <strong>Entry:</strong> #${index + 1}<br>
-                        <strong>Coordinates:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}
-                    </div>
-                `;
-                marker.openPopup();
-            }
         }
 
-        function clearData() {
-            if (confirm('Clear all data?')) {
-                localStorage.removeItem('locationLogs');
-                localStorage.removeItem('device_id');
-                sessionStorage.removeItem('verification_active');
-                clearMarkers();
-                loadLogs();
-            }
-        }
-
-        function exportData() {
-            const logs = JSON.parse(localStorage.getItem('locationLogs') || '[]');
-            if (logs.length === 0) {
-                alert('No data available');
-                return;
-            }
-
-            const csvContent = [
-                ['Timestamp', 'Device', 'Latitude', 'Longitude', 'Accuracy', 'System', 'Display', 'Client', 'Source'].join(','),
-                ...logs.map(log => [
-                    log.timestamp,
-                    log.deviceId,
-                    log.latitude,
-                    log.longitude,
-                    log.accuracy,
-                    log.platform,
-                    log.screenResolution,
-                    log.browser,
-                    log.url
-                ].map(value => `"${value}"`).join(','))
-            ].join('\n');
-
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `system_logs_${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        }
-
-        document.getElementById('autoRefresh').addEventListener('change', function(e) {
-            if (e.target.checked) {
-                autoRefreshInterval = setInterval(loadLogs, 30000);
-            } else {
-                clearInterval(autoRefreshInterval);
-            }
-        });
-
-        if (window.location.protocol === 'http:' && !window.location.hostname.includes('localhost')) {
-            window.location.href = window.location.href.replace('http:', 'https:');
-        } else {
-            initMap();
-            loadLogs();
-        }
+        // Initial load
+        document.addEventListener('DOMContentLoaded', refreshData);
     </script>
 </body>
 </html>
