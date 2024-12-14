@@ -71,8 +71,9 @@
             text-overflow: ellipsis;
             position: relative;
             display: inline-block;
+            cursor: help;
         }
-        .truncate:hover::after {
+        .truncate::after {
             content: attr(data-tooltip);
             position: absolute;
             bottom: 100%;
@@ -86,6 +87,16 @@
             white-space: normal;
             max-width: 300px;
             z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s, visibility 0.3s;
+            pointer-events: none;
+            margin-bottom: 5px;
+            width: max-content;
+        }
+        .truncate:hover::after {
+            visibility: visible;
+            opacity: 1;
         }
         .map {
             height: 400px;
