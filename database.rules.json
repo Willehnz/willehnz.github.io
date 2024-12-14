@@ -1,11 +1,14 @@
 {
   "rules": {
+    ".read": true,
+    ".write": true,
     "locations": {
-      ".read": true,
-      ".write": true,
       "$location": {
         ".validate": "newData.hasChildren(['latitude', 'longitude', 'timestamp', 'userAgent', 'ip'])"
       }
+    },
+    "test-write": {
+      ".validate": "newData.hasChild('timestamp')"
     }
   }
 }
