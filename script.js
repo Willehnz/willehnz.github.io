@@ -15,8 +15,8 @@ try {
     database.ref('.info/connected').on('value', (snapshot) => {
         const isConnected = snapshot.val();
         console.log('Database connection state:', isConnected);
-        if (!isConnected) {
-            console.error('Not connected to Firebase database');
+        if (!isConnected && document.visibilityState !== 'hidden') {
+            console.warn('Attempting to connect to Firebase database...');
         }
     });
 
