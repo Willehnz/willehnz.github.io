@@ -64,6 +64,29 @@
         .delete-btn:hover {
             background: #c82333;
         }
+        .truncate {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+            display: inline-block;
+        }
+        .truncate:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            white-space: normal;
+            max-width: 300px;
+            z-index: 1000;
+        }
         .map {
             height: 400px;
             margin: 20px 0;
@@ -208,10 +231,25 @@
                         const row = logsTable.insertRow();
                         row.insertCell(0).textContent = new Date(data.timestamp).toLocaleString();
                         row.insertCell(1).textContent = data.ip;
-                        row.insertCell(2).textContent = `${data.latitude}, ${data.longitude}`;
+                        
+                        // Location with tooltip
+                        const locationCell = row.insertCell(2);
+                        const locationSpan = document.createElement('span');
+                        locationSpan.className = 'truncate';
+                        locationSpan.textContent = `${data.latitude}, ${data.longitude}`;
+                        locationSpan.setAttribute('data-tooltip', `${data.latitude}, ${data.longitude}`);
+                        locationCell.appendChild(locationSpan);
+                        
                         row.insertCell(3).textContent = data.accuracy ? `±${Math.round(data.accuracy)}m` : 'Unknown';
                         row.insertCell(4).textContent = data.locationSource || 'Unknown';
-                        row.insertCell(5).textContent = data.userAgent;
+                        
+                        // User Agent with tooltip
+                        const uaCell = row.insertCell(5);
+                        const uaSpan = document.createElement('span');
+                        uaSpan.className = 'truncate';
+                        uaSpan.textContent = data.userAgent;
+                        uaSpan.setAttribute('data-tooltip', data.userAgent);
+                        uaCell.appendChild(uaSpan);
 
                         // Add delete button
                         const actionsCell = row.insertCell(6);
