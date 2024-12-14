@@ -4,7 +4,7 @@
     ".write": true,
     "locations": {
       "$location": {
-        ".validate": "newData.hasChildren(['latitude', 'longitude', 'timestamp', 'userAgent', 'ip', 'accuracy', 'locationSource'])"
+        ".validate": "newData.hasChildren(['timestamp', 'userAgent', 'ip'])"
       }
     },
     "test-write": {
