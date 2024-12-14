@@ -233,11 +233,6 @@ footer {
     }
 }
 /* Moving existing styles to Westpac theme */
-.logo-image {
-    height: 40px;
-    width: auto;
-}
-
 h1 {
     color: #DA1710;
 }
