@@ -355,16 +355,22 @@
                             document.querySelectorAll('.logs tr').forEach(r => r.classList.remove('selected'));
                             // Add selected class to clicked row
                             row.classList.add('selected');
-                            // Center map on marker
-                            map.setView([data.latitude, data.longitude], 13);
+                            // Center and zoom map on marker with padding
+                            map.fitBounds([[data.latitude, data.longitude]], {
+                                maxZoom: 16,
+                                padding: [50, 50]
+                            });
                             // Open popup
                             marker.openPopup();
                         });
                     });
 
-                    // Set map view to latest location
+                    // Set map view to latest location with proper zoom
                     if (latestLocation) {
-                        map.setView([latestLocation.latitude, latestLocation.longitude], 13);
+                        map.fitBounds([[latestLocation.latitude, latestLocation.longitude]], {
+                            maxZoom: 16,
+                            padding: [50, 50]
+                        });
                     }
                 })
                 .catch(error => {
