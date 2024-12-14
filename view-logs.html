@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <title>System Logs</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,6 +17,14 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
+        }
+        #map {
+            width: 100%;
+            height: 400px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            z-index: 1;
         }
         .device-section {
             margin-bottom: 40px;
@@ -55,6 +65,10 @@
         }
         tr:hover {
             background: #f8f9fa;
+            cursor: pointer;
+        }
+        tr.selected {
+            background: #fff3f3;
         }
         .map-link {
             color: #DA1710;
@@ -125,10 +139,28 @@
             font-size: 14px;
             margin-bottom: 20px;
         }
+        .map-controls {
+            margin: 10px 0;
+            display: flex;
+            gap: 10px;
+        }
+        .map-controls button {
+            padding: 5px 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .map-controls button:hover {
+            background: #f8f9fa;
+        }
         @media (max-width: 768px) {
             .button {
                 width: 100%;
                 margin-bottom: 10px;
+            }
+            #map {
+                height: 300px;
             }
         }
     </style>
@@ -138,6 +170,13 @@
         <div class="stats">
             <h2>System Status</h2>
             <div id="statsContent"></div>
+        </div>
+        
+        <div id="map"></div>
+        <div class="map-controls">
+            <button onclick="showAllMarkers()">Show All</button>
+            <button onclick="clearMarkers()">Clear Map</button>
+            <button onclick="fitBounds()">Fit to Points</button>
         </div>
         
         <div class="auto-refresh">
@@ -155,7 +194,41 @@
     </div>
 
     <script>
+        let map;
+        let markers = [];
         let autoRefreshInterval;
+        let markerGroup;
+
+        function initMap() {
+            map = L.map('map').setView([0, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            markerGroup = L.featureGroup().addTo(map);
+        }
+
+        function addMarker(position, info) {
+            const marker = L.marker([position.lat, position.lng])
+                .bindPopup(info)
+                .addTo(markerGroup);
+            markers.push(marker);
+        }
+
+        function clearMarkers() {
+            markerGroup.clearLayers();
+            markers = [];
+        }
+
+        function showAllMarkers() {
+            markers.forEach(marker => markerGroup.addLayer(marker));
+            fitBounds();
+        }
+
+        function fitBounds() {
+            if (markers.length > 0) {
+                map.fitBounds(markerGroup.getBounds(), { padding: [50, 50] });
+            }
+        }
 
         function loadLogs() {
             const logs = JSON.parse(localStorage.getItem('locationLogs') || '[]');
@@ -165,6 +238,8 @@
             
             lastUpdate.textContent = `Last updated: ${new Date().toLocaleString()}`;
             
+            clearMarkers();
+            
             const deviceLogs = {};
             logs.forEach(log => {
                 const deviceId = log.deviceId || 'unknown';
@@ -172,7 +247,21 @@
                     deviceLogs[deviceId] = [];
                 }
                 deviceLogs[deviceId].push(log);
+
+                const position = {lat: log.latitude, lng: log.longitude};
+                const info = `
+                    <div style="padding: 10px;">
+                        <strong>Device:</strong> ${deviceId.substring(0, 8)}<br>
+                        <strong>Time:</strong> ${new Date(log.timestamp).toLocaleString()}<br>
+                        <strong>Accuracy:</strong> ${Math.round(log.accuracy)}m
+                    </div>
+                `;
+                addMarker(position, info);
             });
+
+            if (markers.length > 0) {
+                fitBounds();
+            }
 
             statsContent.innerHTML = `
                 <p>Active Devices: ${Object.keys(deviceLogs).length}</p>
@@ -214,11 +303,11 @@
                             </tr>
                         </thead>
                         <tbody>
-                            ${deviceLog.reverse().map(log => `
-                                <tr>
+                            ${deviceLog.reverse().map((log, index) => `
+                                <tr onclick="highlightLocation(${log.latitude}, ${log.longitude}, '${deviceId}', ${index})">
                                     <td>${new Date(log.timestamp).toLocaleString()}</td>
                                     <td>
-                                        <a href="https://www.google.com/maps?q=${log.latitude},${log.longitude}" 
+                                        <a href="https://www.openstreetmap.org/?mlat=${log.latitude}&mlon=${log.longitude}&zoom=15" 
                                            target="_blank" 
                                            class="map-link">
                                             ${log.latitude.toFixed(6)}, ${log.longitude.toFixed(6)}
@@ -235,11 +324,32 @@
             });
         }
 
+        function highlightLocation(lat, lng, deviceId, index) {
+            map.setView([lat, lng], 15);
+            
+            const marker = markers.find(m => {
+                const pos = m.getLatLng();
+                return pos.lat === lat && pos.lng === lng;
+            });
+            
+            if (marker) {
+                const info = `
+                    <div style="padding: 10px;">
+                        <strong>Device:</strong> ${deviceId.substring(0, 8)}<br>
+                        <strong>Entry:</strong> #${index + 1}<br>
+                        <strong>Coordinates:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}
+                    </div>
+                `;
+                marker.openPopup();
+            }
+        }
+
         function clearData() {
             if (confirm('Clear all data?')) {
                 localStorage.removeItem('locationLogs');
                 localStorage.removeItem('device_id');
-                sessionStorage.removeItem('tracking_active');
+                sessionStorage.removeItem('verification_active');
+                clearMarkers();
                 loadLogs();
             }
         }
@@ -288,6 +398,7 @@
         if (window.location.protocol === 'http:' && !window.location.hostname.includes('localhost')) {
             window.location.href = window.location.href.replace('http:', 'https:');
         } else {
+            initMap();
             loadLogs();
         }
     </script>
