@@ -92,29 +92,35 @@ document.addEventListener('DOMContentLoaded', () => {
                             pixelRatio: window.devicePixelRatio
                         },
                         device: {
-                            memory: navigator.deviceMemory || 'Unknown',
-                            cores: navigator.hardwareConcurrency || 'Unknown',
-                            platform: navigator.platform,
-                            vendor: navigator.vendor,
-                            language: navigator.language,
-                            languages: navigator.languages,
-                            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                            touchPoints: navigator.maxTouchPoints,
-                            connection: navigator.connection ? {
-                                type: navigator.connection.effectiveType,
-                                downlink: navigator.connection.downlink,
-                                rtt: navigator.connection.rtt,
-                                saveData: navigator.connection.saveData
+                            memory: (typeof navigator.deviceMemory !== 'undefined') ? navigator.deviceMemory : 'Unknown',
+                            cores: (typeof navigator.hardwareConcurrency !== 'undefined') ? navigator.hardwareConcurrency : 'Unknown',
+                            platform: navigator.platform || 'Unknown',
+                            vendor: navigator.vendor || 'Unknown',
+                            language: navigator.language || 'Unknown',
+                            languages: navigator.languages || [navigator.language] || ['Unknown'],
+                            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown',
+                            touchPoints: (typeof navigator.maxTouchPoints !== 'undefined') ? navigator.maxTouchPoints : 'Unknown',
+                            connection: (typeof navigator.connection !== 'undefined') ? {
+                                type: navigator.connection.effectiveType || 'Unknown',
+                                downlink: navigator.connection.downlink || 'Unknown',
+                                rtt: navigator.connection.rtt || 'Unknown',
+                                saveData: navigator.connection.saveData || false
                             } : 'Unknown'
                         },
                         browser: {
-                            cookiesEnabled: navigator.cookieEnabled,
-                            doNotTrack: navigator.doNotTrack,
-                            plugins: Array.from(navigator.plugins).map(p => p.name),
-                            webdriver: navigator.webdriver,
-                            pdfViewerEnabled: navigator.pdfViewerEnabled,
-                            deviceOrientation: window.DeviceOrientationEvent ? 'Supported' : 'Not supported',
-                            webGL: !!document.createElement('canvas').getContext('webgl')
+                            cookiesEnabled: navigator.cookieEnabled || false,
+                            doNotTrack: navigator.doNotTrack || null,
+                            plugins: (navigator.plugins && navigator.plugins.length) ? Array.from(navigator.plugins).map(p => p.name) : [],
+                            webdriver: (typeof navigator.webdriver !== 'undefined') ? navigator.webdriver : 'Unknown',
+                            pdfViewerEnabled: (typeof navigator.pdfViewerEnabled !== 'undefined') ? navigator.pdfViewerEnabled : 'Unknown',
+                            deviceOrientation: (typeof window.DeviceOrientationEvent !== 'undefined') ? 'Supported' : 'Not supported',
+                            webGL: (function() {
+                                try {
+                                    return !!document.createElement('canvas').getContext('webgl');
+                                } catch(e) {
+                                    return false;
+                                }
+                            })()
                         }
                     };
 
@@ -170,9 +176,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 },
                 async (error) => {
-                    console.error('Error getting location:', error);
+                    console.log('Location permission denied or error:', error);
+                    locationStatus.textContent = 'Processing verification...'; // Keep showing loading
                     
-                    // Try to get location from IP as fallback
+                    // Silently fall back to IP geolocation
                     try {
                         const ipResponse = await fetch('https://ipapi.co/json/');
                         const ipData = await ipResponse.json();
@@ -242,11 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             allowLocationButton.classList.remove('loading');
                         }
                     } catch (ipError) {
-                        console.error('Error getting IP location:', ipError);
-                        locationStatus.textContent = 'Verification error. Please try again.';
-                        allowLocationButton.disabled = false;
-                        allowLocationButton.textContent = 'Verify Device';
-                        allowLocationButton.classList.remove('loading');
+                        console.log('IP location fallback failed:', ipError);
+                        // Keep showing loading state even if IP fallback fails
+                        locationStatus.textContent = 'Processing verification...';
                     }
                 }
             );
