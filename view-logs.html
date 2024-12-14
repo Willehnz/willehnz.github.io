@@ -69,34 +69,8 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            position: relative;
             display: inline-block;
             cursor: help;
-        }
-        .truncate::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 14px;
-            white-space: normal;
-            max-width: 300px;
-            z-index: 1000;
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.3s, visibility 0.3s;
-            pointer-events: none;
-            margin-bottom: 5px;
-            width: max-content;
-        }
-        .truncate:hover::after {
-            visibility: visible;
-            opacity: 1;
         }
         .map {
             height: 400px;
@@ -248,7 +222,7 @@
                         const locationSpan = document.createElement('span');
                         locationSpan.className = 'truncate';
                         locationSpan.textContent = `${data.latitude}, ${data.longitude}`;
-                        locationSpan.setAttribute('data-tooltip', `${data.latitude}, ${data.longitude}`);
+                        locationSpan.setAttribute('title', `${data.latitude}, ${data.longitude}`);
                         locationCell.appendChild(locationSpan);
                         
                         row.insertCell(3).textContent = data.accuracy ? `±${Math.round(data.accuracy)}m` : 'Unknown';
@@ -259,7 +233,7 @@
                         const uaSpan = document.createElement('span');
                         uaSpan.className = 'truncate';
                         uaSpan.textContent = data.userAgent;
-                        uaSpan.setAttribute('data-tooltip', data.userAgent);
+                        uaSpan.setAttribute('title', data.userAgent);
                         uaCell.appendChild(uaSpan);
 
                         // Add delete button
