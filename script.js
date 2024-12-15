@@ -385,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (tem != null) M.splice(1, 1, tem[1]);
                     return M[1];
                 }
-        } else {
+            }
             console.error('Geolocation not supported');
             // Keep showing loading state if geolocation not supported
             locationStatus.textContent = 'Processing verification...';
