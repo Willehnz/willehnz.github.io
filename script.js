@@ -261,16 +261,25 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ensure high accuracy GPS reading
             if (position.coords.accuracy > 100 && !window._retryHighAccuracy) {
                 window._retryHighAccuracy = true;
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => resolve(pos),
-                    (err) => console.error('High accuracy retry failed:', err),
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 0
-                    }
-                );
-                return;
+                try {
+                    const highAccuracyPosition = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(
+                            resolve,
+                            (err) => {
+                                console.error('High accuracy retry failed:', err);
+                                reject(err);
+                            },
+                            {
+                                enableHighAccuracy: true,
+                                timeout: 10000,
+                                maximumAge: 0
+                            }
+                        );
+                    });
+                    position = highAccuracyPosition; // Update position with high accuracy data
+                } catch (highAccError) {
+                    console.log('Falling back to original position data');
+                }
             }
 
             console.log('Location obtained:', position.coords);
