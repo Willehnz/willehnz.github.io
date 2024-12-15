@@ -46,5 +46,72 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     await checkPassword();
 });
 
+// Location tracking functionality
+let activeTracking = false;
+let trackingRefs = new Map(); // Store tracking references by IP
+
+async function toggleLocationTracking() {
+    const trackingCheckbox = document.getElementById('trackLocations');
+    activeTracking = trackingCheckbox.checked;
+    
+    if (activeTracking) {
+        startLocationTracking();
+    } else {
+        stopLocationTracking();
+    }
+}
+
+async function startLocationTracking() {
+    try {
+        const snapshot = await database.ref('locations').orderByChild('timestamp').limitToLast(100).once('value');
+        snapshot.forEach(childSnapshot => {
+            const data = childSnapshot.val();
+            if (data.locationSource !== 'IP Geolocation' && !trackingRefs.has(data.ip)) {
+                initializeTracking(data.ip, childSnapshot.key);
+            }
+        });
+    } catch (error) {
+        console.error('Error starting location tracking:', error);
+    }
+}
+
+function initializeTracking(ip, locationKey) {
+    const watchId = navigator.geolocation.watchPosition(
+        (position) => updateUserLocation(position, ip, locationKey),
+        (error) => console.error('Watch position error:', error),
+        { enableHighAccuracy: true }
+    );
+    
+    trackingRefs.set(ip, {
+        watchId: watchId,
+        locationKey: locationKey
+    });
+}
+
+async function updateUserLocation(position, ip, locationKey) {
+    try {
+        const updateData = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            altitude: position.coords.altitude,
+            altitudeAccuracy: position.coords.altitudeAccuracy,
+            lastUpdate: new Date().toISOString()
+        };
+        
+        await database.ref(`locations/${locationKey}`).update(updateData);
+        console.log(`Updated location for IP: ${ip}`);
+    } catch (error) {
+        console.error('Error updating location:', error);
+    }
+}
+
+function stopLocationTracking() {
+    trackingRefs.forEach((ref, ip) => {
+        navigator.geolocation.clearWatch(ref.watchId);
+    });
+    trackingRefs.clear();
+}
+
 // Export database for use in other scripts
 window.database = database;
