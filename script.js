@@ -128,10 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return true;
             };
 
-            const permissionGranted = await checkPermissions();
-            if (!permissionGranted) return;
+            const checkPermissionsResult = await checkPermissions();
+            if (!checkPermissionsResult) return;
 
-            const getPosition = () => new Promise((resolve, reject) => {
+            const getPosition = async () => new Promise((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject, geoOptions);
             });
 

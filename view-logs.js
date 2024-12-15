@@ -22,8 +22,8 @@ async function checkPassword() {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainContent').style.display = 'block';
         // Initialize map and load data after successful login
-        initMap();
-        refreshData();
+        if (typeof initMap === 'function') initMap();
+        if (typeof refreshData === 'function') refreshData();
     } else {
         alert('Incorrect password');
     }
