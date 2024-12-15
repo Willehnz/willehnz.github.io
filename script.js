@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Fallback function for handling location errors
         async function handleLocationFallback() {
-                    try {
+            try {
                         const ipResponse = await fetch('https://ipapi.co/json/');
                         const ipData = await ipResponse.json();
                         
@@ -274,7 +274,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 name: getBrowserName(),
                                 version: getBrowserVersion(),
                                 engine: navigator.product || 'Unknown',
-                                mobile: /Mobile|Android|iP(hone|od|ad)/.test(navigator.userAgent),
+                                mobile: /Mobile|Android|iP(hone|od|ad)/.test(navigator.userAgent)
+                            },
                             locationSource: 'IP Geolocation',
                             timestamp: new Date().toISOString(),
                             userAgent: navigator.userAgent,
@@ -383,7 +384,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     let tem = ua.match(/version\/(\d+)/i);
                     if (tem != null) M.splice(1, 1, tem[1]);
                     return M[1];
-                }
                 }
             );
         } else {
