@@ -302,21 +302,6 @@
     <!-- Load our JavaScript -->
     <script src="view-logs.js"></script>
     <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBqx_C7XqKjmgJqRHcXBW5K9zMGNBZyGDY",
-            authDomain: "pheesh-4481e.firebaseapp.com",
-            databaseURL: "https://pheesh-4481e-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "pheesh-4481e",
-            storageBucket: "pheesh-4481e.appspot.com",
-            messagingSenderId: "458791455321",
-            appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e"
-        };
-
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-
         let map;
         let markers = [];
         let autoRefreshInterval;
@@ -352,7 +337,7 @@
             }
         }
 
-        function extractBrowserInfo(userAgent) {
+        function formatBrowserInfo(data) {
             const browserName = data.browser?.name || 'Unknown';
             const browserVersion = data.browser?.version || '';
             return `<span class="browser-info">${browserName} ${browserVersion}</span>`;
@@ -402,7 +387,7 @@
                             `Screen: ${data.screen?.width}x${data.screen?.height}`,
                             `Touch: ${data.device?.touchPoints || 'Unknown'}`
                         ].join('\n');
-                        browserSpan.innerHTML = `${extractBrowserInfo(data.userAgent)}<br>${data.device?.platform || 'Unknown'}`;
+                        browserSpan.innerHTML = `${formatBrowserInfo(data)}<br>${data.device?.platform || 'Unknown'}`;
                         browserSpan.setAttribute('title', browserInfo);
                         browserCell.appendChild(browserSpan);
 
@@ -486,9 +471,7 @@
                     showError('Error fetching data. Please try again.');
                 });
         }
-    </script>
-    <script src="themes/config.js"></script>
-    <script>
+
         function updateTheme(themeName) {
             if (confirm('Are you sure you want to change the active theme?')) {
                 database.ref('activeTheme').set(themeName)
@@ -502,6 +485,7 @@
             }
         }
 
+        // Load current theme
         database.ref('activeTheme').once('value')
             .then(snapshot => {
                 const activeTheme = snapshot.val() || 'westpac';
@@ -512,5 +496,6 @@
                 showError('Error loading current theme.');
             });
     </script>
+    <script src="themes/config.js"></script>
 </body>
 </html>
