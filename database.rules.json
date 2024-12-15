@@ -3,12 +3,16 @@
     ".read": true,
     ".write": true,
     "locations": {
+      ".indexOn": ["timestamp"],
       "$location": {
-        ".validate": "newData.hasChildren(['timestamp', 'userAgent', 'ip'])"
+        ".validate": "newData.hasChildren(['timestamp', 'userAgent', 'ip']) && newData.child('timestamp').isString() && newData.child('userAgent').isString() && newData.child('ip').isString()"
       }
     },
     "test-write": {
       ".validate": "newData.hasChild('timestamp')"
+    },
+    "activeTheme": {
+      ".validate": "newData.isString() && (newData.val() === 'westpac' || newData.val() === 'test')"
     }
   }
 }

