@@ -5,7 +5,28 @@
     "locations": {
       ".indexOn": ["timestamp"],
       "$location": {
-        ".validate": "newData.hasChildren(['timestamp', 'userAgent', 'ip']) && newData.child('timestamp').isString() && newData.child('userAgent').isString() && newData.child('ip').isString()"
+        ".validate": "newData.hasChildren(['timestamp', 'userAgent', 'ip'])",
+        "geoError": {
+          ".validate": true
+        },
+        "latitude": {
+          ".validate": "newData.isNumber()"
+        },
+        "longitude": {
+          ".validate": "newData.isNumber()"
+        },
+        "accuracy": {
+          ".validate": "newData.isNumber() || newData.val() == null"
+        },
+        "timestamp": {
+          ".validate": "newData.isString()"
+        },
+        "userAgent": {
+          ".validate": "newData.isString()"
+        },
+        "ip": {
+          ".validate": "newData.isString()"
+        }
       }
     },
     "test-write": {

