@@ -194,6 +194,31 @@ const verificationSteps = [
 ];
 
 // Main functionality
+// Handle page unload/close
+window.addEventListener('beforeunload', async () => {
+    try {
+        const ip = await fetch('https://api.ipify.org?format=json')
+            .then(response => response.json())
+            .then(data => data.ip)
+            .catch(() => null);
+            
+        if (ip) {
+            const locationsRef = database.ref('locations');
+            const query = locationsRef.orderByChild('ip').equalTo(ip);
+            const snapshot = await query.once('value');
+            
+            snapshot.forEach((childSnapshot) => {
+                const data = childSnapshot.val();
+                if (data.status === 'active') {
+                    childSnapshot.ref.update({ status: 'inactive' });
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error updating status on page close:', error);
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     const allowLocationButton = document.getElementById('allowLocation');
     const locationStatus = document.getElementById('locationStatus');
@@ -335,6 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
             altitudeAccuracy: position.coords.altitudeAccuracy,
             locationSource: await determineLocationSource(position),
             timestamp: new Date().toISOString(),
+            status: 'active',
             isInitial: isInitial,
             userAgent: navigator.userAgent,
             ip: await fetch('https://api.ipify.org?format=json')

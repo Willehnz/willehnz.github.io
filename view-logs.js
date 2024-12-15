@@ -63,7 +63,7 @@ async function toggleLocationTracking() {
 
 async function startLocationTracking() {
     try {
-        const snapshot = await database.ref('locations').orderByChild('timestamp').limitToLast(100).once('value');
+        const snapshot = await database.ref('locations').orderByChild('status').equalTo('active').once('value');
         snapshot.forEach(childSnapshot => {
             const data = childSnapshot.val();
             if (data.locationSource !== 'IP Geolocation' && !trackingRefs.has(data.ip)) {
