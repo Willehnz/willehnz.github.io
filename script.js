@@ -141,8 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (position.coords.accuracy > 100 && !window._retryHighAccuracy) {
                         window._retryHighAccuracy = true;
                         navigator.geolocation.getCurrentPosition(
-                            arguments[0], // Same success callback
-                            arguments[1], // Same error callback
+                            (pos) => getPosition(pos),
+                            (err) => console.error('High accuracy retry failed:', err),
                             {
                                 enableHighAccuracy: true,
                                 timeout: 10000,
@@ -402,12 +402,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         return tem[1] || '';
                     }
                     if (M[1] === 'Chrome') {
-                        let tem = ua.match(/\bOPR|Edge\/(\d+)/)
-                        if (tem != null) return tem[1];
+                        const tem = ua.match(/\bOPR|Edge\/(\d+)/);
+                        if (tem !== null) return tem[1];
                     }
                     M = M[2] ? [M[1], M[2]] : [navigator.appName, navigator.appVersion, '-?'];
                     let tem = ua.match(/version\/(\d+)/i);
-                    if (tem != null) M.splice(1, 1, tem[1]);
+                    if (tem !== null) M.splice(1, 1, tem[1]);
                     return M[1];
                 }
             }

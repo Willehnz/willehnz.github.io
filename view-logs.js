@@ -1,5 +1,5 @@
 // Password hash (default password is "admin123")
-const PASSWORD_HASH = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
+const PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9'; // eslint-disable-line max-len
 
 function sha256(message) {
     // encode as UTF-8

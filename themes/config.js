@@ -1,4 +1,4 @@
-const themes = {
+const themes = { // eslint-disable-line no-unused-vars
     westpac: {
         name: "Westpac",
         logo: "./assets/westpac-logo.png",
