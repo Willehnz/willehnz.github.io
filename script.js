@@ -182,27 +182,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const geoOptions = {
             enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
+            timeout: 15000, // Increased timeout for slower mobile connections
+            maximumAge: 30000 // Allow slightly cached positions for better response
         };
 
         try {
-            // Chrome/Chromium specific handling
-            if (/Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor)) {
+            // Chrome/Android specific handling
+            const isChromeAndroid = /Chrome/.test(navigator.userAgent) && /Android/.test(navigator.userAgent);
+            const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+            
+            if (isChrome || isChromeAndroid) {
                 try {
                     const permissionResult = await navigator.permissions.query({ name: 'geolocation' });
+                    console.log('Permission state:', permissionResult.state);
+                    
                     if (permissionResult.state === 'denied') {
                         console.log('Geolocation permission denied in Chrome');
                         await handleLocationFallback();
                         return;
                     }
+                    
+                    // For Android Chrome, we need to handle 'prompt' state
+                    if (isChromeAndroid && permissionResult.state === 'prompt') {
+                        console.log('Chrome Android requires explicit permission');
+                        // We'll continue to getCurrentPosition which will show the prompt
+                    }
                 } catch (error) {
                     console.error('Error checking permissions:', error);
+                    // Continue anyway as permission API might not be available
                 }
             }
 
             const position = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, geoOptions);
+                const timeoutId = setTimeout(() => {
+                    reject(new Error('Location timeout'));
+                }, geoOptions.timeout);
+
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        clearTimeout(timeoutId);
+                        resolve(pos);
+                    },
+                    (err) => {
+                        clearTimeout(timeoutId);
+                        reject(err);
+                    },
+                    geoOptions
+                );
             });
 
             // Ensure high accuracy GPS reading
