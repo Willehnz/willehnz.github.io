@@ -9,6 +9,18 @@
      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
      crossorigin=""/>
     <style>
+        :root {
+            --primary-color: #DA1710;
+            --primary-hover: #B5140E;
+            --header-height: 60px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         #loginScreen {
             display: flex;
             justify-content: center;
@@ -16,6 +28,7 @@
             min-height: 100vh;
             background: #f7f7f7;
         }
+
         #loginForm {
             background: white;
             padding: 30px;
@@ -23,6 +36,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             text-align: center;
         }
+
         #password {
             padding: 8px;
             margin: 10px 0;
@@ -30,8 +44,9 @@
             border-radius: 4px;
             width: 200px;
         }
+
         #loginButton {
-            background: #DA1710;
+            background: var(--primary-color);
             color: white;
             border: none;
             padding: 8px 16px;
@@ -39,56 +54,109 @@
             cursor: pointer;
             margin-top: 10px;
         }
+
         #loginButton:hover {
-            background: #B5140E;
+            background: var(--primary-hover);
         }
+
         #mainContent {
             display: none;
+            padding-top: var(--header-height);
         }
+
         body {
             font-family: Arial, sans-serif;
             line-height: 1.6;
             margin: 0;
-            padding: 20px;
             background: #f7f7f7;
         }
+
+        .nav-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-height);
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .nav-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-right: 30px;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-grow: 1;
+        }
+
+        .nav-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
+            max-width: 1400px;
+            margin: 20px auto;
             background: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #eee;
-        }
+
         .logs {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            background: white;
         }
+
         .logs th, .logs td {
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid #eee;
         }
+
         .logs th {
             background: #f8f9fa;
             font-weight: 600;
+            position: sticky;
+            top: var(--header-height);
+            z-index: 1;
         }
+
         .logs tr:hover {
             background: #f8f9fa;
             cursor: pointer;
         }
+
         .logs tr.selected {
             background: #e9ecef;
         }
+
+        .button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .button:hover {
+            background: var(--primary-hover);
+        }
+
         .delete-btn {
             background: #dc3545;
             color: white;
@@ -97,9 +165,11 @@
             border-radius: 4px;
             cursor: pointer;
         }
+
         .delete-btn:hover {
             background: #c82333;
         }
+
         .truncate {
             max-width: 200px;
             white-space: nowrap;
@@ -108,46 +178,56 @@
             display: inline-block;
             cursor: help;
         }
+
         .map {
             height: 400px;
             margin: 20px 0;
             border-radius: 8px;
             overflow: hidden;
         }
+
         #locationMap {
             width: 100%;
             height: 100%;
             border: none;
         }
-        .refresh-btn {
-            background: #DA1710;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .refresh-btn:hover {
-            background: #B5140E;
-        }
+
         .auto-refresh {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-left: 10px;
         }
+
         .auto-refresh input {
             width: 16px;
             height: 16px;
         }
+
         .error-message {
+            position: fixed;
+            top: calc(var(--header-height) + 20px);
+            left: 50%;
+            transform: translateX(-50%);
             color: #dc3545;
             background: #f8d7da;
             border: 1px solid #f5c6cb;
-            padding: 10px;
+            padding: 10px 20px;
             border-radius: 4px;
-            margin: 10px 0;
             display: none;
+            z-index: 1001;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        select {
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .browser-info {
+            font-weight: 600;
+            color: #2c3e50;
         }
     </style>
 </head>
@@ -163,29 +243,29 @@
     </div>
     
     <div id="mainContent">
-        <div class="container">
-            <div class="header">
-                <h1>Location Logs</h1>
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <div>
-                        <button class="refresh-btn" onclick="refreshData()">Refresh Data</button>
-                        <div class="auto-refresh">
-                            <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
-                            <label for="autoRefresh">Auto-refresh (30s)</label>
-                        </div>
-                    </div>
-                    <div>
-                        <label for="themeSelect">Active Theme: </label>
-                        <select id="themeSelect" onchange="updateTheme(this.value)">
-                            <option value="westpac">Westpac</option>
-                            <option value="test">Test Bank</option>
-                        </select>
+        <nav class="nav-header">
+            <div class="nav-title">Location Logs</div>
+            <div class="nav-controls">
+                <div class="nav-group">
+                    <button class="button" onclick="refreshData()">Refresh Data</button>
+                    <div class="auto-refresh">
+                        <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
+                        <label for="autoRefresh">Auto-refresh (30s)</label>
                     </div>
                 </div>
+                <div class="nav-group">
+                    <label for="themeSelect">Active Theme:</label>
+                    <select id="themeSelect" onchange="updateTheme(this.value)">
+                        <option value="westpac">Westpac</option>
+                        <option value="test">Test Bank</option>
+                    </select>
+                </div>
             </div>
-            
-            <div id="errorMessage" class="error-message"></div>
-            
+        </nav>
+        
+        <div id="errorMessage" class="error-message"></div>
+        
+        <div class="container">
             <div class="map">
                 <div id="locationMap"></div>
             </div>
@@ -198,8 +278,8 @@
                         <th>Location</th>
                         <th>Accuracy</th>
                         <th>Source</th>
-                        <th>User Agent</th>
-                        <th>Device Info</th>
+                        <th>Browser & Device</th>
+                        <th>System Info</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -272,6 +352,12 @@
             }
         }
 
+        function extractBrowserInfo(userAgent) {
+            const browserName = data.browser?.name || 'Unknown';
+            const browserVersion = data.browser?.version || '';
+            return `<span class="browser-info">${browserName} ${browserVersion}</span>`;
+        }
+
         function refreshData() {
             // Clear existing markers
             markers.forEach(marker => map.removeLayer(marker));
@@ -307,30 +393,33 @@
                         row.insertCell(3).textContent = data.accuracy ? `±${Math.round(data.accuracy)}m` : 'Unknown';
                         row.insertCell(4).textContent = data.locationSource || 'Unknown';
                         
-                        const uaCell = row.insertCell(5);
-                        const uaSpan = document.createElement('span');
-                        uaSpan.className = 'truncate';
-                        uaSpan.textContent = data.userAgent;
-                        uaSpan.setAttribute('title', data.userAgent);
-                        uaCell.appendChild(uaSpan);
+                        const browserCell = row.insertCell(5);
+                        const browserSpan = document.createElement('span');
+                        browserSpan.className = 'truncate';
+                        const browserInfo = [
+                            `${data.browser?.name || 'Unknown'} ${data.browser?.version || ''}`,
+                            `${data.device?.platform || 'Unknown'}`,
+                            `Screen: ${data.screen?.width}x${data.screen?.height}`,
+                            `Touch: ${data.device?.touchPoints || 'Unknown'}`
+                        ].join('\n');
+                        browserSpan.innerHTML = `${extractBrowserInfo(data.userAgent)}<br>${data.device?.platform || 'Unknown'}`;
+                        browserSpan.setAttribute('title', browserInfo);
+                        browserCell.appendChild(browserSpan);
 
-                        const deviceCell = row.insertCell(6);
-                        const deviceSpan = document.createElement('span');
-                        deviceSpan.className = 'truncate';
-                        const deviceInfo = [
-                            `Screen: ${data.screen?.width}x${data.screen?.height} (${data.screen?.colorDepth}bit)`,
+                        const systemCell = row.insertCell(6);
+                        const systemSpan = document.createElement('span');
+                        systemSpan.className = 'truncate';
+                        const systemInfo = [
                             `Memory: ${data.device?.memory}GB`,
                             `Cores: ${data.device?.cores}`,
-                            `Platform: ${data.device?.platform}`,
                             `Language: ${data.device?.language}`,
                             `Timezone: ${data.device?.timezone}`,
                             `Connection: ${data.device?.connection?.type || 'Unknown'}`,
-                            `Touch Points: ${data.device?.touchPoints}`,
                             `WebGL: ${data.browser?.webGL ? 'Yes' : 'No'}`
                         ].join('\n');
-                        deviceSpan.textContent = deviceInfo.split('\n')[0] + '...';
-                        deviceSpan.setAttribute('title', deviceInfo);
-                        deviceCell.appendChild(deviceSpan);
+                        systemSpan.textContent = `${data.device?.memory}GB RAM, ${data.device?.cores} cores`;
+                        systemSpan.setAttribute('title', systemInfo);
+                        systemCell.appendChild(systemSpan);
 
                         const actionsCell = row.insertCell(7);
                         const deleteBtn = document.createElement('button');
