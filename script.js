@@ -48,19 +48,29 @@ const initFirebase = () => {
 // Initialize theme handling
 let currentTheme = '';
 
-// Initial theme load
-database.ref('activeTheme').once('value')
-    .then(snapshot => {
+// Initialize Firebase and load theme
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await initFirebase();
+        
+        // Initial theme load
+        const snapshot = await database.ref('activeTheme').once('value');
         const initialTheme = snapshot.val() || 'westpac';
         applyTheme(initialTheme);
         document.querySelector('.container').classList.add('loaded');
-    });
 
-// Listen for theme changes
-database.ref('activeTheme').on('value', snapshot => {
-    const newTheme = snapshot.val() || 'westpac';
-    if (newTheme !== currentTheme) {
-        applyTheme(newTheme);
+        // Listen for theme changes
+        database.ref('activeTheme').on('value', snapshot => {
+            const newTheme = snapshot.val() || 'westpac';
+            if (newTheme !== currentTheme) {
+                applyTheme(newTheme);
+            }
+        });
+    } catch (error) {
+        console.error('Failed to initialize:', error);
+        // Fallback to default theme if Firebase fails
+        applyTheme('westpac');
+        document.querySelector('.container').classList.add('loaded');
     }
 });
 
