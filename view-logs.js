@@ -31,7 +31,13 @@ function sha256(message) {
 async function checkPassword() {
     try {
         const password = document.getElementById('password').value;
+        if (!password) {
+            showToast('Please enter a password', 'error');
+            return;
+        }
+
         const hash = await sha256(password);
+        console.log('Checking password:', hash === PASSWORD_HASH);
         
         if (hash === PASSWORD_HASH) {
             // Show main content
@@ -53,6 +59,8 @@ async function checkPassword() {
             showToast('Login successful', 'success');
         } else {
             showToast('Incorrect password', 'error');
+            document.getElementById('password').value = '';
+            document.getElementById('password').focus();
         }
     } catch (error) {
         console.error('Login error:', error);
@@ -60,10 +68,16 @@ async function checkPassword() {
     }
 }
 
-// Prevent form submission and handle enter key
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    await checkPassword();
+// Wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', () => {
+    // Add form submission handler
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await checkPassword();
+        });
+    }
 });
 
 // Listen for location requests and handle updates
