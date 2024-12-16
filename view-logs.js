@@ -9,12 +9,15 @@ const firebaseConfig = {
     appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e"
 };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+// Initialize Firebase if not already initialized
+let database;
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+database = firebase.database();
 
 // Password hash (default password is "admin123")
-const PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';  
+const PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
 
 function sha256(message) {
     const msgBuffer = new TextEncoder().encode(message);                    
@@ -26,20 +29,29 @@ function sha256(message) {
 }
 
 async function checkPassword() {
-    const password = document.getElementById('password').value;
-    const hash = await sha256(password);
-    
-    if (hash === PASSWORD_HASH) {
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
-        // Initialize map and load data after successful login
-        if (typeof initMap === 'function') initMap();
-        if (typeof refreshData === 'function') refreshData();
+    try {
+        const password = document.getElementById('password').value;
+        const hash = await sha256(password);
         
-        // Start listening for location requests
-        listenForLocationRequests();
-    } else {
-        alert('Incorrect password');
+        if (hash === PASSWORD_HASH) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            
+            // Initialize map
+            map = L.map('locationMap').setView([0, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Load initial data and start listeners
+            refreshData();
+            listenForLocationRequests();
+        } else {
+            showToast('Incorrect password', 'error');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showToast('Login failed. Please try again.', 'error');
     }
 }
 
