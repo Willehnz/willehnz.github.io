@@ -354,6 +354,14 @@
         let markers = [];
         let autoRefreshInterval;
 
+        // Add event listener for form submission
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await checkPassword();
+            });
+        });
+
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;

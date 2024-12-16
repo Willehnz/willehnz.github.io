@@ -34,18 +34,23 @@ async function checkPassword() {
         const hash = await sha256(password);
         
         if (hash === PASSWORD_HASH) {
+            // Show main content
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
             
-            // Initialize map
-            map = L.map('locationMap').setView([0, 0], 2);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
+            // Initialize map if not already initialized
+            if (!map) {
+                map = L.map('locationMap').setView([0, 0], 2);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+            }
             
             // Load initial data and start listeners
             refreshData();
             listenForLocationRequests();
+            
+            showToast('Login successful', 'success');
         } else {
             showToast('Incorrect password', 'error');
         }
