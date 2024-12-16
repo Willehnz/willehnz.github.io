@@ -1,23 +1,5 @@
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyBqx_C7XqKjmgJqRHcXBW5K9zMGNBZyGDY",
-    authDomain: "pheesh-4481e.firebaseapp.com",
-    databaseURL: "https://pheesh-4481e-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "pheesh-4481e",
-    storageBucket: "pheesh-4481e.appspot.com",
-    messagingSenderId: "458791455321",
-    appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e"
-};
-
-// Initialize Firebase if not already initialized
-let database;
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-database = firebase.database();
-
 // Password hash (default password is "admin123")
-const PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
+const PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';  
 
 function sha256(message) {
     const msgBuffer = new TextEncoder().encode(message);                    
@@ -27,58 +9,6 @@ function sha256(message) {
         return hashHex;
     });
 }
-
-async function checkPassword() {
-    try {
-        const password = document.getElementById('password').value;
-        if (!password) {
-            showToast('Please enter a password', 'error');
-            return;
-        }
-
-        const hash = await sha256(password);
-        console.log('Checking password:', hash === PASSWORD_HASH);
-        
-        if (hash === PASSWORD_HASH) {
-            // Show main content
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-            
-            // Initialize map if not already initialized
-            if (!map) {
-                map = L.map('locationMap').setView([0, 0], 2);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(map);
-            }
-            
-            // Load initial data and start listeners
-            refreshData();
-            listenForLocationRequests();
-            
-            showToast('Login successful', 'success');
-        } else {
-            showToast('Incorrect password', 'error');
-            document.getElementById('password').value = '';
-            document.getElementById('password').focus();
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        showToast('Login failed. Please try again.', 'error');
-    }
-}
-
-// Wait for DOM to be ready
-document.addEventListener('DOMContentLoaded', () => {
-    // Add form submission handler
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await checkPassword();
-        });
-    }
-});
 
 // Listen for location requests and handle updates
 function listenForLocationRequests() {
@@ -139,5 +69,53 @@ function listenForLocationRequests() {
     });
 }
 
-// Export database for use in other scripts
-window.database = database;
+async function checkPassword() {
+    try {
+        const password = document.getElementById('password').value;
+        const hash = await sha256(password);
+        
+        if (hash === PASSWORD_HASH) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            // Initialize map and load data after successful login
+            if (typeof initMap === 'function') initMap();
+            if (typeof refreshData === 'function') refreshData();
+            
+            // Start listening for location requests
+            listenForLocationRequests();
+        } else {
+            alert('Incorrect password');
+        }
+    } catch (error) {
+        console.error('Error during login:', error);
+        alert('Error during login. Please try again.');
+    }
+}
+
+// Initialize admin interface after Firebase is ready
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Wait for Firebase to be ready
+        await window.firebaseReady;
+
+        // Add login form event listener
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await checkPassword();
+            });
+        } else {
+            console.error('Login form not found');
+        }
+
+        // Show error if Firebase failed to initialize
+        if (!window.database) {
+            throw new Error('Firebase database not initialized');
+        }
+
+    } catch (error) {
+        console.error('Failed to initialize admin interface:', error);
+        alert('Error initializing admin interface. Please refresh the page.');
+    }
+});

