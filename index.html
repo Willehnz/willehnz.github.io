@@ -16,8 +16,11 @@
     <link id="themeStyles" rel="stylesheet" href="">
     <link rel="stylesheet" href="style.css">
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
+        import { getDatabase } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
+        window.firebase = { initializeApp, getDatabase };
+    </script>
 </head>
 <body>
     <div class="container">

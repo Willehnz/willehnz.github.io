@@ -12,10 +12,8 @@ const firebaseConfig = {
 // Global promise for Firebase initialization
 export const firebaseReady = new Promise((resolve, reject) => {
     try {
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const database = firebase.database();
+        const app = window.firebase.initializeApp(firebaseConfig);
+        const database = window.firebase.getDatabase(app);
         console.log('Firebase initialized successfully');
         
         // Test database connection
@@ -33,7 +31,7 @@ export const firebaseReady = new Promise((resolve, reject) => {
 
         // Test write permission
         database.ref('test-write').set({
-            timestamp: firebase.database.ServerValue.TIMESTAMP
+            timestamp: Date.now()
         }).then(() => {
             console.log('Write permission verified');
             database.ref('test-write').remove();
