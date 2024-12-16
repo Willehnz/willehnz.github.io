@@ -7,7 +7,7 @@ import { getDeviceInfo } from './src/utils/browser-detection.js';
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Wait for Firebase to be ready
-        await firebaseReady;
+        const database = await firebaseReady;
         
         // Initialize theme system
         await initializeTheme();
@@ -42,8 +42,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const { ip } = await ipResponse.json();
 
                 // Save location to Firebase
-                const database = window.database;
-                const locationRef = database.ref('locations').push();
+                const locationsRef = window.firebase.database.ref(database, 'locations');
+                const newLocationRef = window.firebase.database.push(locationsRef);
 
                 const locationData = {
                     latitude: position.coords.latitude,
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ...getDeviceInfo()
                 };
 
-                await locationRef.set(locationData);
+                await window.firebase.database.set(newLocationRef, locationData);
                 locationStatus.textContent = 'Device verified successfully';
                 
                 // Add success animation class

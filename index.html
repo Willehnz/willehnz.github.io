@@ -18,8 +18,39 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
-        import { getDatabase } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
-        window.firebase = { initializeApp, getDatabase };
+        import { 
+            getDatabase, 
+            ref, 
+            set, 
+            get,
+            update,
+            remove,
+            push,
+            onValue,
+            onChildAdded,
+            query,
+            orderByChild,
+            equalTo 
+        } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
+        
+        // Expose Firebase functions to window
+        window.firebase = {
+            initializeApp,
+            getDatabase,
+            database: {
+                ref,
+                set,
+                get,
+                update,
+                remove,
+                push,
+                onValue,
+                onChildAdded,
+                query,
+                orderByChild,
+                equalTo
+            }
+        };
     </script>
 </head>
 <body>

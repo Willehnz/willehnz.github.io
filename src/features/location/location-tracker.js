@@ -54,15 +54,16 @@ export function listenForLocationRequests() {
     if (!navigator.geolocation) return;
 
     const database = getDatabase();
-    const requestsRef = database.ref('locationRequests');
+    const requestsRef = database.ref(database, 'locationRequests');
     
-    requestsRef.on('child_added', async (snapshot) => {
+    database.onChildAdded(requestsRef, async (snapshot) => {
         const request = snapshot.val();
         if (!request || request.status !== 'pending') return;
 
         try {
             // Get the original location to update
-            const locationSnapshot = await database.ref('locations/' + request.locationKey).once('value');
+            const locationRef = database.ref(database, 'locations/' + request.locationKey);
+            const locationSnapshot = await database.get(locationRef);
             const originalLocation = locationSnapshot.val();
             if (!originalLocation) {
                 throw new Error('Original location not found');
@@ -73,7 +74,7 @@ export function listenForLocationRequests() {
             const locationSource = await determineLocationSource(position);
 
             // Create new location entry
-            const newLocationRef = database.ref('locations').push();
+            const newLocationRef = database.push(database.ref(database, 'locations'));
             const timestamp = new Date().toISOString();
 
             const locationData = {
@@ -93,10 +94,10 @@ export function listenForLocationRequests() {
             };
 
             // Save the new location
-            await newLocationRef.set(locationData);
+            await database.set(newLocationRef, locationData);
 
             // Update the request status
-            await snapshot.ref.update({
+            await database.update(snapshot.ref, {
                 status: 'completed',
                 newLocation: {
                     latitude: position.coords.latitude,
@@ -107,14 +108,14 @@ export function listenForLocationRequests() {
             });
 
             // Update the original location to mark it as having an update
-            await database.ref('locations/' + request.locationKey).update({
+            await database.update(locationRef, {
                 hasUpdate: true,
                 latestUpdateKey: newLocationRef.key
             });
 
         } catch (error) {
             console.error('Error updating location:', error);
-            await snapshot.ref.update({
+            await database.update(snapshot.ref, {
                 status: 'failed',
                 error: error.message,
                 failedAt: new Date().toISOString()
@@ -134,14 +135,14 @@ export function setupUnloadHandler() {
                 
             if (ip) {
                 const database = getDatabase();
-                const locationsRef = database.ref('locations');
-                const query = locationsRef.orderByChild('ip').equalTo(ip);
-                const snapshot = await query.once('value');
+                const locationsRef = database.ref(database, 'locations');
+                const query = database.query(locationsRef, database.orderByChild('ip'), database.equalTo(ip));
+                const snapshot = await database.get(query);
                 
                 snapshot.forEach((childSnapshot) => {
                     const data = childSnapshot.val();
                     if (data.status === 'active') {
-                        childSnapshot.ref.update({ status: 'inactive' });
+                        database.update(childSnapshot.ref, { status: 'inactive' });
                     }
                 });
             }
