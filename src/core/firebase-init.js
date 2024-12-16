@@ -17,13 +17,12 @@ export const firebaseReady = new Promise((resolve, reject) => {
         console.log('Firebase initialized successfully');
         
         // Test database connection
-        const connectedRef = database.ref(database, '.info/connected');
-        database.onValue(connectedRef, (snapshot) => {
+        const connectedRef = window.firebase.database.ref(database, '.info/connected');
+        window.firebase.database.onValue(connectedRef, (snapshot) => {
             const isConnected = snapshot.val();
             console.log('Database connection state:', isConnected);
             if (!isConnected && document.visibilityState !== 'hidden') {
                 console.warn('Attempting to reconnect to Firebase...');
-                // Note: goOnline() is not available in modular SDK
             }
         });
 
@@ -31,12 +30,12 @@ export const firebaseReady = new Promise((resolve, reject) => {
         window.database = database;
 
         // Test write permission
-        const testRef = database.ref(database, 'test-write');
-        database.set(testRef, {
+        const testRef = window.firebase.database.ref(database, 'test-write');
+        window.firebase.database.set(testRef, {
             timestamp: Date.now()
         }).then(() => {
             console.log('Write permission verified');
-            database.remove(testRef);
+            window.firebase.database.remove(testRef);
             resolve(database);
         }).catch(reject);
     } catch (error) {

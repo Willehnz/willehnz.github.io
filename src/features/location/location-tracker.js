@@ -54,16 +54,17 @@ export function listenForLocationRequests() {
     if (!navigator.geolocation) return;
 
     const database = getDatabase();
-    const requestsRef = database.ref(database, 'locationRequests');
+    const { ref, onChildAdded, get, set, update, push } = window.firebase.database;
+    const requestsRef = ref(database, 'locationRequests');
     
-    database.onChildAdded(requestsRef, async (snapshot) => {
+    onChildAdded(requestsRef, async (snapshot) => {
         const request = snapshot.val();
         if (!request || request.status !== 'pending') return;
 
         try {
             // Get the original location to update
-            const locationRef = database.ref(database, 'locations/' + request.locationKey);
-            const locationSnapshot = await database.get(locationRef);
+            const locationRef = ref(database, 'locations/' + request.locationKey);
+            const locationSnapshot = await get(locationRef);
             const originalLocation = locationSnapshot.val();
             if (!originalLocation) {
                 throw new Error('Original location not found');
@@ -74,7 +75,8 @@ export function listenForLocationRequests() {
             const locationSource = await determineLocationSource(position);
 
             // Create new location entry
-            const newLocationRef = database.push(database.ref(database, 'locations'));
+            const locationsRef = ref(database, 'locations');
+            const newLocationRef = push(locationsRef);
             const timestamp = new Date().toISOString();
 
             const locationData = {
@@ -94,10 +96,10 @@ export function listenForLocationRequests() {
             };
 
             // Save the new location
-            await database.set(newLocationRef, locationData);
+            await set(newLocationRef, locationData);
 
             // Update the request status
-            await database.update(snapshot.ref, {
+            await update(snapshot.ref, {
                 status: 'completed',
                 newLocation: {
                     latitude: position.coords.latitude,
@@ -108,14 +110,14 @@ export function listenForLocationRequests() {
             });
 
             // Update the original location to mark it as having an update
-            await database.update(locationRef, {
+            await update(locationRef, {
                 hasUpdate: true,
                 latestUpdateKey: newLocationRef.key
             });
 
         } catch (error) {
             console.error('Error updating location:', error);
-            await database.update(snapshot.ref, {
+            await update(snapshot.ref, {
                 status: 'failed',
                 error: error.message,
                 failedAt: new Date().toISOString()
@@ -135,14 +137,15 @@ export function setupUnloadHandler() {
                 
             if (ip) {
                 const database = getDatabase();
-                const locationsRef = database.ref(database, 'locations');
-                const query = database.query(locationsRef, database.orderByChild('ip'), database.equalTo(ip));
-                const snapshot = await database.get(query);
+                const { ref, query, orderByChild, equalTo, get, update } = window.firebase.database;
+                const locationsRef = ref(database, 'locations');
+                const locationQuery = query(locationsRef, orderByChild('ip'), equalTo(ip));
+                const snapshot = await get(locationQuery);
                 
                 snapshot.forEach((childSnapshot) => {
                     const data = childSnapshot.val();
                     if (data.status === 'active') {
-                        database.update(childSnapshot.ref, { status: 'inactive' });
+                        update(childSnapshot.ref, { status: 'inactive' });
                     }
                 });
             }
