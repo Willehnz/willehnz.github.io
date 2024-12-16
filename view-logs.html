@@ -229,6 +229,52 @@
             font-weight: 600;
             color: #2c3e50;
         }
+
+        /* Toast notification styles */
+        .toast {
+            position: fixed;
+            top: calc(var(--header-height) + 20px);
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 4px;
+            color: white;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1002;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .toast.success {
+            background-color: #28a745;
+        }
+
+        .toast.error {
+            background-color: #dc3545;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .location-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 8px;
+        }
+
+        .location-btn:hover {
+            background: #138496;
+        }
+
+        .location-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -264,6 +310,7 @@
         </nav>
         
         <div id="errorMessage" class="error-message"></div>
+        <div id="toast" class="toast"></div>
         
         <div class="container">
             <div class="map">
@@ -300,47 +347,21 @@
      crossorigin=""></script>
 
     <!-- Load our JavaScript -->
+    <script src="script.js"></script>
     <script src="view-logs.js"></script>
     <script>
         let map;
         let markers = [];
         let autoRefreshInterval;
 
-        function showError(message) {
-            const errorElement = document.getElementById('errorMessage');
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
             setTimeout(() => {
-                errorElement.style.display = 'none';
-            }, 5000);
-        }
-
-        function toggleAutoRefresh() {
-            const autoRefreshCheckbox = document.getElementById('autoRefresh');
-            if (autoRefreshCheckbox.checked) {
-                autoRefreshInterval = setInterval(refreshData, 30000);
-            } else {
-                clearInterval(autoRefreshInterval);
-            }
-        }
-
-        function initMap() {
-            try {
-                map = L.map('locationMap').setView([0, 0], 2);
-                
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(map);
-            } catch (error) {
-                console.error('Error initializing map:', error);
-                showError('Error initializing map. Please refresh the page.');
-            }
-        }
-
-        function formatBrowserInfo(data) {
-            const browserName = data.browser?.name || 'Unknown';
-            const browserVersion = data.browser?.version || '';
-            return `<span class="browser-info">${browserName} ${browserVersion}</span>`;
+                toast.className = 'toast';
+            }, 3000);
         }
 
         function refreshData() {
@@ -407,6 +428,18 @@
                         systemCell.appendChild(systemSpan);
 
                         const actionsCell = row.insertCell(7);
+                        
+                        // Add location request button
+                        const locationBtn = document.createElement('button');
+                        locationBtn.textContent = 'Request Location';
+                        locationBtn.className = 'location-btn';
+                        locationBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            requestLocationUpdate(locationKey, data);
+                        };
+                        actionsCell.appendChild(locationBtn);
+
+                        // Add delete button
                         const deleteBtn = document.createElement('button');
                         deleteBtn.textContent = 'Delete';
                         deleteBtn.className = 'delete-btn';
@@ -472,29 +505,76 @@
                 });
         }
 
-        function updateTheme(themeName) {
-            if (confirm('Are you sure you want to change the active theme?')) {
-                database.ref('activeTheme').set(themeName)
-                    .then(() => {
-                        showError('Theme updated successfully');
-                    })
-                    .catch(error => {
-                        console.error('Error updating theme:', error);
-                        showError('Error updating theme: ' + error.message);
-                    });
+        async function requestLocationUpdate(locationKey, currentData) {
+            const locationBtn = event.target;
+            locationBtn.disabled = true;
+            locationBtn.textContent = 'Requesting...';
+
+            try {
+                // Create a new location request entry
+                const requestRef = database.ref('locationRequests').push();
+                await requestRef.set({
+                    locationKey: locationKey,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    status: 'pending'
+                });
+
+                // Listen for updates to this request
+                const listener = requestRef.on('value', async (snapshot) => {
+                    const request = snapshot.val();
+                    if (!request) return;
+
+                    if (request.status === 'completed' && request.newLocation) {
+                        // Update the marker on the map
+                        const markerIndex = markers.findIndex(m => 
+                            m.getLatLng().lat === currentData.latitude && 
+                            m.getLatLng().lng === currentData.longitude
+                        );
+                        
+                        if (markerIndex > -1) {
+                            map.removeLayer(markers[markerIndex]);
+                            markers.splice(markerIndex, 1);
+                            
+                            const newMarker = L.marker([request.newLocation.latitude, request.newLocation.longitude])
+                                .bindPopup(`${currentData.ip}<br>${new Date().toLocaleString()}`)
+                                .addTo(map);
+                            markers.push(newMarker);
+                            
+                            map.fitBounds([[request.newLocation.latitude, request.newLocation.longitude]], {
+                                maxZoom: 16,
+                                padding: [50, 50]
+                            });
+                        }
+
+                        showToast('Location updated successfully', 'success');
+                        requestRef.off('value', listener);
+                        refreshData(); // Refresh the table
+                    } else if (request.status === 'failed') {
+                        showToast('Failed to update location: ' + (request.error || 'Unknown error'), 'error');
+                        requestRef.off('value', listener);
+                    }
+
+                    locationBtn.disabled = false;
+                    locationBtn.textContent = 'Request Location';
+                });
+
+                // Set a timeout to stop listening after 30 seconds
+                setTimeout(() => {
+                    requestRef.off('value', listener);
+                    if (locationBtn) {
+                        locationBtn.disabled = false;
+                        locationBtn.textContent = 'Request Location';
+                    }
+                    showToast('Location request timed out', 'error');
+                }, 30000);
+
+            } catch (error) {
+                console.error('Error requesting location update:', error);
+                showToast('Error requesting location update', 'error');
+                locationBtn.disabled = false;
+                locationBtn.textContent = 'Request Location';
             }
         }
-
-        // Load current theme
-        database.ref('activeTheme').once('value')
-            .then(snapshot => {
-                const activeTheme = snapshot.val() || 'westpac';
-                document.getElementById('themeSelect').value = activeTheme;
-            })
-            .catch(error => {
-                console.error('Error loading theme:', error);
-                showError('Error loading current theme.');
-            });
     </script>
     <script src="themes/config.js"></script>
 </body>

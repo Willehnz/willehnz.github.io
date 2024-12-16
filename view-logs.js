@@ -35,6 +35,9 @@ async function checkPassword() {
         // Initialize map and load data after successful login
         if (typeof initMap === 'function') initMap();
         if (typeof refreshData === 'function') refreshData();
+        
+        // Start listening for location requests
+        listenForLocationRequests();
     } else {
         alert('Incorrect password');
     }
@@ -46,6 +49,64 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     await checkPassword();
 });
 
+// Listen for location requests and handle updates
+function listenForLocationRequests() {
+    const requestsRef = database.ref('locationRequests');
+    
+    requestsRef.on('child_added', async (snapshot) => {
+        const request = snapshot.val();
+        if (!request || request.status !== 'pending') return;
+
+        try {
+            // Get the original location data
+            const locationSnapshot = await database.ref('locations/' + request.locationKey).once('value');
+            const locationData = locationSnapshot.val();
+            if (!locationData) {
+                throw new Error('Location not found');
+            }
+
+            // Create a new location entry with the same data structure
+            const newLocationRef = database.ref('locations').push();
+            const timestamp = new Date().toISOString();
+            
+            // Copy the original data but update timestamp and mark as an update
+            const newLocationData = {
+                ...locationData,
+                timestamp: timestamp,
+                previousLocationKey: request.locationKey,
+                isLocationUpdate: true
+            };
+
+            // Save the new location
+            await newLocationRef.set(newLocationData);
+
+            // Update the request status
+            await snapshot.ref.update({
+                status: 'completed',
+                newLocation: {
+                    latitude: locationData.latitude,
+                    longitude: locationData.longitude,
+                    accuracy: locationData.accuracy
+                },
+                completedAt: timestamp
+            });
+
+            // Update the original location to mark it as having an update
+            await database.ref('locations/' + request.locationKey).update({
+                hasUpdate: true,
+                latestUpdateKey: newLocationRef.key
+            });
+
+        } catch (error) {
+            console.error('Error handling location request:', error);
+            await snapshot.ref.update({
+                status: 'failed',
+                error: error.message,
+                failedAt: new Date().toISOString()
+            });
+        }
+    });
+}
 
 // Export database for use in other scripts
 window.database = database;
