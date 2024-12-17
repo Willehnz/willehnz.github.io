@@ -9,39 +9,30 @@ const firebaseConfig = {
     appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e"
 };
 
-// Global promise for Firebase initialization
-export const firebaseReady = new Promise((resolve, reject) => {
-    try {
-        const app = window.firebase.initializeApp(firebaseConfig);
-        const database = window.firebase.getDatabase(app);
-        console.log('Firebase initialized successfully');
-        
-        // Test database connection
-        const connectedRef = window.firebase.database.ref(database, '.info/connected');
-        window.firebase.database.onValue(connectedRef, (snapshot) => {
-            const isConnected = snapshot.val();
-            console.log('Database connection state:', isConnected);
-            if (!isConnected && document.visibilityState !== 'hidden') {
-                console.warn('Attempting to reconnect to Firebase...');
-            }
-        });
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
-        // Export database for use in other scripts
-        window.database = database;
-
-        // Test write permission
-        const testRef = window.firebase.database.ref(database, 'test-write');
-        window.firebase.database.set(testRef, {
-            timestamp: Date.now()
-        }).then(() => {
-            console.log('Write permission verified');
-            window.firebase.database.remove(testRef);
-            resolve(database);
-        }).catch(reject);
-    } catch (error) {
-        console.error('Firebase initialization error:', error);
-        reject(error);
+// Test database connection
+const connectedRef = database.ref('.info/connected');
+connectedRef.on('value', (snapshot) => {
+    const isConnected = snapshot.val();
+    console.log('Database connection state:', isConnected);
+    if (!isConnected && document.visibilityState !== 'hidden') {
+        console.warn('Attempting to reconnect to Firebase...');
     }
 });
 
-export const getDatabase = () => window.database;
+// Make database available globally
+window.database = database;
+
+// Test write permission
+const testRef = database.ref('test-write');
+testRef.set({
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+}).then(() => {
+    console.log('Write permission verified');
+    testRef.remove();
+}).catch(error => {
+    console.error('Firebase initialization error:', error);
+});

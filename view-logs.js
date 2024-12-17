@@ -12,7 +12,7 @@ function sha256(message) {
 
 // Listen for location requests and handle updates
 function listenForLocationRequests() {
-    const requestsRef = database.ref('locationRequests');
+    const requestsRef = window.database.ref('locationRequests');
     
     requestsRef.on('child_added', async (snapshot) => {
         const request = snapshot.val();
@@ -20,14 +20,14 @@ function listenForLocationRequests() {
 
         try {
             // Get the original location data
-            const locationSnapshot = await database.ref('locations/' + request.locationKey).once('value');
+            const locationSnapshot = await window.database.ref('locations/' + request.locationKey).once('value');
             const locationData = locationSnapshot.val();
             if (!locationData) {
                 throw new Error('Location not found');
             }
 
             // Create a new location entry with the same data structure
-            const newLocationRef = database.ref('locations').push();
+            const newLocationRef = window.database.ref('locations').push();
             const timestamp = new Date().toISOString();
             
             // Copy the original data but update timestamp and mark as an update
@@ -53,7 +53,7 @@ function listenForLocationRequests() {
             });
 
             // Update the original location to mark it as having an update
-            await database.ref('locations/' + request.locationKey).update({
+            await window.database.ref('locations/' + request.locationKey).update({
                 hasUpdate: true,
                 latestUpdateKey: newLocationRef.key
             });
@@ -92,30 +92,22 @@ async function checkPassword() {
     }
 }
 
-// Initialize admin interface after Firebase is ready
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        // Wait for Firebase to be ready
-        await window.firebaseReady;
+// Initialize admin interface
+document.addEventListener('DOMContentLoaded', () => {
+    // Add login form event listener
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await checkPassword();
+        });
+    } else {
+        console.error('Login form not found');
+    }
 
-        // Add login form event listener
-        const loginForm = document.getElementById('loginForm');
-        if (loginForm) {
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await checkPassword();
-            });
-        } else {
-            console.error('Login form not found');
-        }
-
-        // Show error if Firebase failed to initialize
-        if (!window.database) {
-            throw new Error('Firebase database not initialized');
-        }
-
-    } catch (error) {
-        console.error('Failed to initialize admin interface:', error);
+    // Show error if Firebase failed to initialize
+    if (!window.database) {
+        console.error('Firebase database not initialized');
         alert('Error initializing admin interface. Please refresh the page.');
     }
 });

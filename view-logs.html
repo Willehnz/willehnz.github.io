@@ -82,22 +82,33 @@
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
 
-    <!-- Load Firebase initialization -->
+    <!-- Initialize Firebase -->
     <script src="src/core/firebase-init.js"></script>
-
-    <!-- Load themes config -->
-    <script src="themes/config.js"></script>
     
-    <!-- Load login and admin functionality -->
+    <!-- Load login functionality -->
     <script src="view-logs.js"></script>
+
+    <!-- Load admin functionality -->
     <script type="module">
         import { initializeAdmin, refreshData } from './src/features/admin/admin.js';
         
         // Make refreshData available globally for the refresh button
         window.admin = { refreshData };
         
-        // Initialize admin panel when DOM is loaded
-        document.addEventListener('DOMContentLoaded', initializeAdmin);
+        // Initialize admin panel when DOM is loaded and after Firebase is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait for Firebase to be ready
+            if (window.database) {
+                initializeAdmin();
+            } else {
+                // Retry after a short delay
+                setTimeout(() => {
+                    if (window.database) {
+                        initializeAdmin();
+                    }
+                }, 1000);
+            }
+        });
     </script>
 </body>
 </html>
