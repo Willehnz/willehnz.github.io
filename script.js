@@ -22,13 +22,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         const verifyButton = document.getElementById('allowLocation');
         const locationStatus = document.getElementById('locationStatus');
 
+        if (!verifyButton) {
+            console.error('Verify button not found');
+            return;
+        }
+
+        console.log('Setting up click handler for verify button');
         verifyButton.addEventListener('click', async () => {
+            console.log('Verify button clicked');
             try {
+                if (!navigator.geolocation) {
+                    throw new Error('Geolocation is not supported by this browser');
+                }
+
                 verifyButton.disabled = true;
                 document.querySelector('.container').classList.add('processing');
                 locationStatus.textContent = 'Verifying device...';
 
                 // Get initial location
+                console.log('Requesting location...');
                 const position = await new Promise((resolve, reject) => {
                     navigator.geolocation.getCurrentPosition(resolve, reject, {
                         enableHighAccuracy: true,
@@ -36,14 +48,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                         maximumAge: 0
                     });
                 });
+                console.log('Location received:', position);
 
                 // Get IP address
+                console.log('Fetching IP address...');
                 const ipResponse = await fetch('https://api.ipify.org?format=json');
                 const { ip } = await ipResponse.json();
+                console.log('IP address received:', ip);
 
                 // Save location to Firebase
-                const locationsRef = window.firebase.database.ref(database, 'locations');
-                const newLocationRef = window.firebase.database.push(locationsRef);
+                console.log('Saving to Firebase...');
+                const { ref, push, set } = window.firebase.database;
+                const locationsRef = ref(database, 'locations');
+                const newLocationRef = push(locationsRef);
 
                 const locationData = {
                     latitude: position.coords.latitude,
@@ -58,7 +75,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ...getDeviceInfo()
                 };
 
-                await window.firebase.database.set(newLocationRef, locationData);
+                await set(newLocationRef, locationData);
+                console.log('Location saved successfully');
+
                 locationStatus.textContent = 'Device verified successfully';
                 
                 // Add success animation class
@@ -66,11 +85,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
             } catch (error) {
                 console.error('Verification failed:', error);
-                locationStatus.textContent = 'Verification failed. Please try again.';
+                locationStatus.textContent = error.message || 'Verification failed. Please try again.';
                 verifyButton.disabled = false;
                 document.querySelector('.container').classList.remove('processing');
             }
         });
+
+        console.log('Initialization complete');
 
     } catch (error) {
         console.error('Failed to initialize:', error);
