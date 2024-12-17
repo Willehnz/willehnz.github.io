@@ -8,14 +8,16 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
      crossorigin=""/>
-    <!-- Keep existing styles -->
+    <!-- Core styles -->
     <link rel="stylesheet" href="style.css">
+    <!-- View logs specific styles -->
+    <link rel="stylesheet" href="src/styles/view-logs.css">
 </head>
 <body>
     <div id="loginScreen">
-        <form id="loginForm">
-            <h2>Location Logs Admin</h2>
-            <div>
+        <form id="loginForm" class="text-center">
+            <h2 class="mb-3">Location Logs Admin</h2>
+            <div class="mb-2">
                 <input type="password" id="password" placeholder="Enter password" required>
             </div>
             <button type="submit" id="loginButton">Login</button>
@@ -47,7 +49,7 @@
         <div id="toast" class="toast"></div>
         
         <div class="container">
-            <div class="map">
+            <div class="map mb-4">
                 <div id="locationMap"></div>
             </div>
 

@@ -1,0 +1,62 @@
+/* Base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f7f7f7;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Typography */
+h1 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    font-weight: normal;
+}
+
+/* Common Components */
+.button {
+    padding: 0.5rem 1rem;
+    background: var(--primary-color, #DA1710);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.button:hover {
+    background: var(--primary-hover, #B5140E);
+}
+
+/* Error and Toast Messages */
+.error-message {
+    background: #fee;
+    color: #c00;
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+    display: none;
+}
+
+.toast {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: #333;
+    color: white;
+    padding: 1rem;
+    border-radius: 4px;
+    display: none;
+    z-index: 1000;
+}
