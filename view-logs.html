@@ -24,7 +24,7 @@
         </form>
     </div>
     
-    <div id="mainContent">
+    <div id="mainContent" style="display: none;">
         <nav class="nav-header">
             <div class="nav-title">Location Logs</div>
             <div class="nav-controls">
@@ -82,10 +82,14 @@
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
 
+    <!-- Load Firebase initialization -->
+    <script src="src/core/firebase-init.js"></script>
+
     <!-- Load themes config -->
     <script src="themes/config.js"></script>
     
-    <!-- Load our modular scripts -->
+    <!-- Load login and admin functionality -->
+    <script src="view-logs.js"></script>
     <script type="module">
         import { initializeAdmin, refreshData } from './src/features/admin/admin.js';
         
