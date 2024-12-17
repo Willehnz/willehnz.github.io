@@ -5,14 +5,16 @@ let currentTheme = '';
 export async function initializeTheme() {
     try {
         const database = getDatabase();
+        const { ref, onValue, get } = window.firebase.database;
         
         // Initial theme load
-        const snapshot = await database.ref('activeTheme').once('value');
+        const themeRef = ref(database, 'activeTheme');
+        const snapshot = await get(themeRef);
         const initialTheme = snapshot.val() || 'westpac';
         applyTheme(initialTheme);
 
         // Listen for theme changes
-        database.ref('activeTheme').on('value', snapshot => {
+        onValue(themeRef, (snapshot) => {
             const newTheme = snapshot.val() || 'westpac';
             if (newTheme !== currentTheme) {
                 applyTheme(newTheme);
