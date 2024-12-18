@@ -1,4 +1,3 @@
-import { getDatabase } from '../../core/firebase-init.js';
 import { getDeviceInfo } from '../../utils/browser-detection.js';
 
 // Helper function to determine location source
@@ -51,20 +50,18 @@ async function getHighAccuracyPosition() {
 
 // Listen for location requests
 export function listenForLocationRequests() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation || !window.database) return;
 
-    const database = getDatabase();
-    const { ref, onChildAdded, get, set, update, push } = window.firebase.database;
-    const requestsRef = ref(database, 'locationRequests');
+    const requestsRef = window.database.ref('locationRequests');
     
-    onChildAdded(requestsRef, async (snapshot) => {
+    requestsRef.on('child_added', async (snapshot) => {
         const request = snapshot.val();
         if (!request || request.status !== 'pending') return;
 
         try {
             // Get the original location to update
-            const locationRef = ref(database, 'locations/' + request.locationKey);
-            const locationSnapshot = await get(locationRef);
+            const locationRef = window.database.ref('locations/' + request.locationKey);
+            const locationSnapshot = await locationRef.once('value');
             const originalLocation = locationSnapshot.val();
             if (!originalLocation) {
                 throw new Error('Original location not found');
@@ -75,8 +72,8 @@ export function listenForLocationRequests() {
             const locationSource = await determineLocationSource(position);
 
             // Create new location entry
-            const locationsRef = ref(database, 'locations');
-            const newLocationRef = push(locationsRef);
+            const locationsRef = window.database.ref('locations');
+            const newLocationRef = locationsRef.push();
             const timestamp = new Date().toISOString();
 
             const locationData = {
@@ -96,10 +93,10 @@ export function listenForLocationRequests() {
             };
 
             // Save the new location
-            await set(newLocationRef, locationData);
+            await newLocationRef.set(locationData);
 
             // Update the request status
-            await update(snapshot.ref, {
+            await snapshot.ref.update({
                 status: 'completed',
                 newLocation: {
                     latitude: position.coords.latitude,
@@ -110,14 +107,14 @@ export function listenForLocationRequests() {
             });
 
             // Update the original location to mark it as having an update
-            await update(locationRef, {
+            await locationRef.update({
                 hasUpdate: true,
                 latestUpdateKey: newLocationRef.key
             });
 
         } catch (error) {
             console.error('Error updating location:', error);
-            await update(snapshot.ref, {
+            await snapshot.ref.update({
                 status: 'failed',
                 error: error.message,
                 failedAt: new Date().toISOString()
@@ -135,17 +132,15 @@ export function setupUnloadHandler() {
                 .then(data => data.ip)
                 .catch(() => null);
                 
-            if (ip) {
-                const database = getDatabase();
-                const { ref, query, orderByChild, equalTo, get, update } = window.firebase.database;
-                const locationsRef = ref(database, 'locations');
-                const locationQuery = query(locationsRef, orderByChild('ip'), equalTo(ip));
-                const snapshot = await get(locationQuery);
+            if (ip && window.database) {
+                const locationsRef = window.database.ref('locations');
+                const locationQuery = locationsRef.orderByChild('ip').equalTo(ip);
+                const snapshot = await locationQuery.once('value');
                 
                 snapshot.forEach((childSnapshot) => {
                     const data = childSnapshot.val();
                     if (data.status === 'active') {
-                        update(childSnapshot.ref, { status: 'inactive' });
+                        childSnapshot.ref.update({ status: 'inactive' });
                     }
                 });
             }
