@@ -15,43 +15,6 @@
     </style>
     <link id="themeStyles" rel="stylesheet" href="">
     <link rel="stylesheet" href="style.css">
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
-        import { 
-            getDatabase, 
-            ref, 
-            set, 
-            get,
-            update,
-            remove,
-            push,
-            onValue,
-            onChildAdded,
-            query,
-            orderByChild,
-            equalTo 
-        } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
-        
-        // Expose Firebase functions to window
-        window.firebase = {
-            initializeApp,
-            getDatabase,
-            database: {
-                ref,
-                set,
-                get,
-                update,
-                remove,
-                push,
-                onValue,
-                onChildAdded,
-                query,
-                orderByChild,
-                equalTo
-            }
-        };
-    </script>
 </head>
 <body>
     <div class="container">
@@ -102,9 +65,18 @@
             </div>
         </footer>
     </div>
-    <!-- Load theme config first -->
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+    <!-- Load Firebase initialization first -->
+    <script src="src/core/firebase-init.js"></script>
+
+    <!-- Load theme config -->
     <script src="themes/config.js"></script>
-    <!-- Load main script as a module -->
-    <script type="module" src="./script.js"></script>
+
+    <!-- Load main script -->
+    <script type="module" src="script.js"></script>
 </body>
 </html>

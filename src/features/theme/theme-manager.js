@@ -1,20 +1,21 @@
-import { getDatabase } from '../../core/firebase-init.js';
-
 let currentTheme = '';
 
 export async function initializeTheme() {
     try {
-        const database = getDatabase();
-        const { ref, onValue, get } = window.firebase.database;
+        // Use compat version consistently
+        const database = window.database;
+        if (!database) {
+            throw new Error('Firebase database not initialized');
+        }
         
         // Initial theme load
-        const themeRef = ref(database, 'activeTheme');
-        const snapshot = await get(themeRef);
+        const themeRef = database.ref('activeTheme');
+        const snapshot = await themeRef.once('value');
         const initialTheme = snapshot.val() || 'westpac';
         applyTheme(initialTheme);
 
         // Listen for theme changes
-        onValue(themeRef, (snapshot) => {
+        themeRef.on('value', (snapshot) => {
             const newTheme = snapshot.val() || 'westpac';
             if (newTheme !== currentTheme) {
                 applyTheme(newTheme);
