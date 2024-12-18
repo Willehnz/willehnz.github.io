@@ -1,9 +1,13 @@
-import { getDatabase } from '../../core/firebase-init.js';
-
+// Fetch locations from Firebase
 export async function fetchLocations() {
-    const database = getDatabase();
     try {
-        const snapshot = await database.ref('locations')
+        if (!window.database) {
+            throw new Error('Firebase database not initialized');
+        }
+
+        console.log('Fetching locations from Firebase...');
+        const locationsRef = window.database.ref('locations');
+        const snapshot = await locationsRef
             .orderByChild('timestamp')
             .limitToLast(100)
             .once('value');
@@ -15,6 +19,7 @@ export async function fetchLocations() {
                 ...childSnapshot.val()
             });
         });
+        console.log('Fetched locations:', locations);
         return locations;
     } catch (error) {
         console.error('Error fetching locations:', error);
@@ -22,10 +27,14 @@ export async function fetchLocations() {
     }
 }
 
+// Delete location
 export async function deleteLocation(locationKey) {
-    const database = getDatabase();
     try {
-        await database.ref('locations/' + locationKey).remove();
+        if (!window.database) {
+            throw new Error('Firebase database not initialized');
+        }
+
+        await window.database.ref('locations/' + locationKey).remove();
         return true;
     } catch (error) {
         console.error('Error deleting location:', error);
@@ -33,10 +42,14 @@ export async function deleteLocation(locationKey) {
     }
 }
 
+// Request location update
 export async function requestLocationUpdate(locationKey) {
-    const database = getDatabase();
     try {
-        const requestRef = database.ref('locationRequests').push();
+        if (!window.database) {
+            throw new Error('Firebase database not initialized');
+        }
+
+        const requestRef = window.database.ref('locationRequests').push();
         await requestRef.set({
             locationKey: locationKey,
             timestamp: firebase.database.ServerValue.TIMESTAMP,
@@ -49,10 +62,14 @@ export async function requestLocationUpdate(locationKey) {
     }
 }
 
+// Update theme
 export async function updateTheme(themeName) {
-    const database = getDatabase();
     try {
-        await database.ref('activeTheme').set(themeName);
+        if (!window.database) {
+            throw new Error('Firebase database not initialized');
+        }
+
+        await window.database.ref('activeTheme').set(themeName);
         return true;
     } catch (error) {
         console.error('Error updating theme:', error);
@@ -60,10 +77,14 @@ export async function updateTheme(themeName) {
     }
 }
 
+// Get current theme
 export async function getCurrentTheme() {
-    const database = getDatabase();
     try {
-        const snapshot = await database.ref('activeTheme').once('value');
+        if (!window.database) {
+            throw new Error('Firebase database not initialized');
+        }
+
+        const snapshot = await window.database.ref('activeTheme').once('value');
         return snapshot.val() || 'westpac';
     } catch (error) {
         console.error('Error loading theme:', error);

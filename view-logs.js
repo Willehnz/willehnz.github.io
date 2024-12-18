@@ -75,11 +75,22 @@ async function checkPassword() {
         const hash = await sha256(password);
         
         if (hash === PASSWORD_HASH) {
+            console.log('Login successful, showing main content');
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
-            // Initialize map and load data after successful login
-            if (typeof initMap === 'function') initMap();
-            if (typeof refreshData === 'function') refreshData();
+            
+            // Import admin functionality
+            const { initializeAdmin } = await import('./src/features/admin/admin.js');
+            const { refreshMap } = await import('./src/features/admin/map-handler.js');
+            
+            // Initialize admin panel
+            await initializeAdmin();
+            
+            // Refresh map after container is visible
+            setTimeout(() => {
+                refreshMap();
+                console.log('Map refreshed after login');
+            }, 100);
             
             // Start listening for location requests
             listenForLocationRequests();
@@ -94,6 +105,8 @@ async function checkPassword() {
 
 // Initialize admin interface
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, setting up login form');
+    
     // Add login form event listener
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {

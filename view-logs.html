@@ -99,12 +99,24 @@
         document.addEventListener('DOMContentLoaded', () => {
             // Wait for Firebase to be ready
             if (window.database) {
-                initializeAdmin();
+                console.log('Firebase ready, initializing admin panel...');
+                // Add a small delay to ensure map container is ready
+                setTimeout(() => {
+                    initializeAdmin().catch(error => {
+                        console.error('Failed to initialize admin panel:', error);
+                    });
+                }, 100);
             } else {
+                console.log('Firebase not ready, retrying...');
                 // Retry after a short delay
                 setTimeout(() => {
                     if (window.database) {
-                        initializeAdmin();
+                        console.log('Firebase ready on retry, initializing admin panel...');
+                        initializeAdmin().catch(error => {
+                            console.error('Failed to initialize admin panel on retry:', error);
+                        });
+                    } else {
+                        console.error('Firebase still not ready after retry');
                     }
                 }, 1000);
             }

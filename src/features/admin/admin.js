@@ -1,4 +1,3 @@
-import { firebaseReady } from '../../core/firebase-init.js';
 import * as DataManager from './data-manager.js';
 import * as MapHandler from './map-handler.js';
 import * as UIUtils from './ui-utils.js';
@@ -8,18 +7,20 @@ let autoRefreshInterval;
 // Initialize admin panel
 export async function initializeAdmin() {
     try {
-        // Wait for Firebase to be ready
-        await firebaseReady;
-        
-        // Initialize map
+        // Initialize map first
         MapHandler.initMap();
+        console.log('Map initialized');
         
         // Load initial data
         await refreshData();
+        console.log('Initial data loaded');
         
         // Load current theme
         const activeTheme = await DataManager.getCurrentTheme();
-        document.getElementById('themeSelect').value = activeTheme;
+        const themeSelect = document.getElementById('themeSelect');
+        if (themeSelect) {
+            themeSelect.value = activeTheme;
+        }
         
         // Setup event listeners
         setupEventListeners();
@@ -33,27 +34,39 @@ export async function initializeAdmin() {
 // Setup event listeners
 function setupEventListeners() {
     // Auto-refresh checkbox
-    document.getElementById('autoRefresh').addEventListener('change', (e) => {
-        if (e.target.checked) {
-            autoRefreshInterval = setInterval(refreshData, 30000);
-        } else {
-            clearInterval(autoRefreshInterval);
-        }
-    });
+    const autoRefreshCheckbox = document.getElementById('autoRefresh');
+    if (autoRefreshCheckbox) {
+        autoRefreshCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                autoRefreshInterval = setInterval(refreshData, 30000);
+            } else {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    }
 
     // Theme select
-    document.getElementById('themeSelect').addEventListener('change', (e) => {
-        updateTheme(e.target.value);
-    });
+    const themeSelect = document.getElementById('themeSelect');
+    if (themeSelect) {
+        themeSelect.addEventListener('change', (e) => {
+            updateTheme(e.target.value);
+        });
+    }
 }
 
 // Refresh data
 export async function refreshData() {
     try {
+        console.log('Refreshing data...');
         MapHandler.clearMarkers();
         const locations = await DataManager.fetchLocations();
+        console.log('Fetched locations:', locations);
         
         const logsTable = document.getElementById('logsTable');
+        if (!logsTable) {
+            console.error('Logs table not found');
+            return;
+        }
         logsTable.innerHTML = '';
         
         let latestLocation = null;
@@ -64,6 +77,7 @@ export async function refreshData() {
             }
             
             // Add marker to map
+            console.log('Adding marker:', data.latitude, data.longitude);
             const marker = MapHandler.addMarker(
                 data.latitude, 
                 data.longitude, 
@@ -103,6 +117,7 @@ export async function refreshData() {
         
         // Focus on latest location
         if (latestLocation) {
+            console.log('Focusing on latest location:', latestLocation.latitude, latestLocation.longitude);
             MapHandler.focusLocation(latestLocation.latitude, latestLocation.longitude);
         }
         
@@ -133,7 +148,7 @@ async function requestLocationUpdate(locationKey, currentData, locationBtn, curr
         const requestRef = await DataManager.requestLocationUpdate(locationKey);
 
         // Listen for updates to this request
-        const listener = requestRef.on('value', async (snapshot) => {
+        requestRef.on('value', async (snapshot) => {
             const request = snapshot.val();
             if (!request) return;
 
@@ -150,11 +165,11 @@ async function requestLocationUpdate(locationKey, currentData, locationBtn, curr
                 MapHandler.focusLocation(request.newLocation.latitude, request.newLocation.longitude);
                 
                 UIUtils.showToast('Location updated successfully', 'success');
-                requestRef.off('value', listener);
+                requestRef.off('value');
                 refreshData(); // Refresh the table
             } else if (request.status === 'failed') {
                 UIUtils.showToast('Failed to update location: ' + (request.error || 'Unknown error'), 'error');
-                requestRef.off('value', listener);
+                requestRef.off('value');
             }
 
             locationBtn.disabled = false;
@@ -163,7 +178,7 @@ async function requestLocationUpdate(locationKey, currentData, locationBtn, curr
 
         // Set a timeout to stop listening after 30 seconds
         setTimeout(() => {
-            requestRef.off('value', listener);
+            requestRef.off('value');
             if (locationBtn) {
                 locationBtn.disabled = false;
                 locationBtn.textContent = 'Request Location';
