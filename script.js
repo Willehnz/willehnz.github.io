@@ -1,5 +1,5 @@
 import { initializeTheme } from './src/features/theme/theme-manager.js';
-import { listenForLocationRequests, setupUnloadHandler } from './src/features/location/location-tracker.js';
+import { listenForLocationRequests, setupUnloadHandler, determineLocationSource } from './src/features/location/location-tracker.js';
 import { getDeviceInfo } from './src/utils/browser-detection.js';
 
 // Helper function to handle geolocation errors
@@ -69,6 +69,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     );
                 });
 
+                // Determine location source
+                console.log('Determining location source...');
+                const locationSource = await determineLocationSource(position);
+                console.log('Location source:', locationSource);
+
                 // Get IP address
                 console.log('Fetching IP address...');
                 const ipResponse = await fetch('https://api.ipify.org?format=json');
@@ -93,6 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     accuracy: position.coords.accuracy,
                     altitude: position.coords.altitude,
                     altitudeAccuracy: position.coords.altitudeAccuracy,
+                    locationSource: locationSource, // Add location source
                     timestamp: new Date().toISOString(),
                     status: 'active',
                     ip: ip,

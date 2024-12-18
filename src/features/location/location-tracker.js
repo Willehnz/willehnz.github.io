@@ -1,17 +1,24 @@
 import { getDeviceInfo } from '../../utils/browser-detection.js';
 
 // Helper function to determine location source
-async function determineLocationSource(position) {
+export async function determineLocationSource(position) {
+    console.log('Determining location source for position:', position);
+    
+    // Check if high accuracy is available
     if ('permissions' in navigator) {
         try {
             const result = await navigator.permissions.query({ name: 'geolocation' });
+            console.log('Geolocation permission state:', result.state);
+            
             if (result.state === 'granted') {
-                // If accuracy is high, it's definitely GPS
+                // Check for high accuracy GPS
                 if (position.coords.accuracy < 100) {
+                    console.log('High accuracy GPS detected');
                     return 'GPS (High Accuracy)';
                 }
-                // If accuracy is moderate, it might be GPS with poor signal or WiFi
+                // Check for low accuracy GPS
                 else if (position.coords.accuracy < 500) {
+                    console.log('Low accuracy GPS detected');
                     return 'GPS (Low Accuracy)';
                 }
             }
@@ -20,7 +27,9 @@ async function determineLocationSource(position) {
         }
     }
     
-    // Fallback to accuracy-based detection
+    // If no permission info, use accuracy-based detection
+    console.log('Using accuracy-based detection. Accuracy:', position.coords.accuracy);
+    
     if (position.coords.accuracy < 100) {
         return 'GPS (High Accuracy)';
     }
@@ -30,7 +39,10 @@ async function determineLocationSource(position) {
     else if (position.coords.accuracy < 2000) {
         return 'WiFi';
     }
-    return 'Cell/IP';
+    else if (position.coords.accuracy < 5000) {
+        return 'Cell Tower';
+    }
+    return 'IP-Based';
 }
 
 // Helper function to get high accuracy position
@@ -70,6 +82,7 @@ export function listenForLocationRequests() {
             // Request new high accuracy position
             const position = await getHighAccuracyPosition();
             const locationSource = await determineLocationSource(position);
+            console.log('Location source for update:', locationSource);
 
             // Create new location entry
             const locationsRef = window.database.ref('locations');
@@ -101,7 +114,8 @@ export function listenForLocationRequests() {
                 newLocation: {
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy
+                    accuracy: position.coords.accuracy,
+                    locationSource: locationSource
                 },
                 completedAt: timestamp
             });
