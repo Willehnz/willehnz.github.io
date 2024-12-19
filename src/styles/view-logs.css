@@ -72,9 +72,10 @@
     background: white;
     padding: 1rem 2rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 100;
 }
 
@@ -104,32 +105,46 @@
     gap: 0.5rem;
 }
 
-/* Map Container */
+/* Main Layout */
+#mainContent {
+    padding-top: 120px; /* Space for fixed header */
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+}
+
+/* Map Panel */
+.map-panel {
+    width: 40%;
+    position: fixed;
+    top: 120px; /* Below header */
+    right: 0;
+    bottom: 0;
+    background: white;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+}
+
 .map {
     width: 100%;
-    height: 400px;
-    margin-bottom: 2rem;
+    height: calc(100% - 2rem); /* Account for padding */
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     background: #f8f9fa;
-    position: relative;
 }
 
 #locationMap {
     width: 100%;
     height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
 }
 
-/* Ensure Leaflet container is visible */
-.leaflet-container {
-    width: 100%;
-    height: 100%;
-    z-index: 1;
+/* Logs Panel */
+.logs-panel {
+    width: 60%;
+    padding: 0 1rem;
+    overflow-y: auto;
+    height: calc(100vh - 120px); /* Full height minus header */
 }
 
 /* Logs Table */
@@ -153,6 +168,9 @@
     background: #f8f9fa;
     font-weight: 600;
     color: var(--primary-color, #DA1710);
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
 .logs tr:hover {
@@ -228,7 +246,24 @@
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
+    #mainContent {
+        flex-direction: column;
+    }
+
+    .map-panel {
+        position: static;
+        width: 100%;
+        height: 400px;
+        padding: 1rem;
+    }
+
+    .logs-panel {
+        width: 100%;
+        height: auto;
+        overflow: visible;
+    }
+
     .nav-controls {
         flex-direction: column;
         align-items: stretch;

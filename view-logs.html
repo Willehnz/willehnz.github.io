@@ -48,11 +48,8 @@
         <div id="errorMessage" class="error-message"></div>
         <div id="toast" class="toast"></div>
         
-        <div class="container">
-            <div class="map mb-4">
-                <div id="locationMap"></div>
-            </div>
-
+        <!-- Split view layout -->
+        <div class="logs-panel">
             <table class="logs">
                 <thead>
                     <tr>
@@ -70,6 +67,12 @@
                     <!-- Data will be populated by JavaScript -->
                 </tbody>
             </table>
+        </div>
+
+        <div class="map-panel">
+            <div class="map">
+                <div id="locationMap"></div>
+            </div>
         </div>
     </div>
 
