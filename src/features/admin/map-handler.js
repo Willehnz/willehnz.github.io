@@ -98,15 +98,8 @@ export function focusLocation(latitude, longitude, openPopup = false) {
 
         console.log('Focusing location:', latitude, longitude);
         
-        // Create smaller bounds for closer zoom
-        const bounds = L.latLngBounds([
-            [latitude - 0.01, longitude - 0.01], // Reduced from 0.1 to 0.01
-            [latitude + 0.01, longitude + 0.01]  // This creates a much tighter bound
-        ]);
-        
-        map.fitBounds(bounds, {
-            padding: [50, 50],
-            maxZoom: 17, // Increased from 16 to 17 for closer zoom
+        // Use setView instead of fitBounds for precise centering
+        map.setView([latitude, longitude], 15, {
             animate: true,
             duration: 1
         });
