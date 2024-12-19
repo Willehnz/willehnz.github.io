@@ -159,6 +159,52 @@
     background: #f8f9fa;
 }
 
+/* Location Source Styles */
+.denied-indicator {
+    color: #DA1710;
+    margin-right: 4px;
+    font-size: 12px;
+}
+
+/* Truncate and Tooltip Styles */
+.truncate {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+}
+
+/* Action Buttons */
+.location-btn,
+.delete-btn {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    margin-right: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.location-btn {
+    background: #007bff;
+    color: white;
+}
+
+.location-btn:hover {
+    background: #0056b3;
+}
+
+.delete-btn {
+    background: #dc3545;
+    color: white;
+}
+
+.delete-btn:hover {
+    background: #c82333;
+}
+
 /* Error and Toast Messages */
 .error-message {
     background: #fee;

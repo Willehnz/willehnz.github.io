@@ -1,3 +1,5 @@
+import { createMarkerPopup } from './ui-utils.js';
+
 let map;
 let markers = [];
 
@@ -53,7 +55,7 @@ export function clearMarkers() {
     }
 }
 
-export function addMarker(latitude, longitude, popupContent) {
+export function addMarker(latitude, longitude, data) {
     try {
         if (!map) {
             console.error('Map not initialized');
@@ -62,7 +64,7 @@ export function addMarker(latitude, longitude, popupContent) {
 
         console.log('Adding marker at:', latitude, longitude);
         const marker = L.marker([latitude, longitude])
-            .bindPopup(popupContent)
+            .bindPopup(createMarkerPopup(data))
             .addTo(map);
         markers.push(marker);
         return marker;
@@ -98,7 +100,7 @@ export function focusLocation(latitude, longitude, openPopup = false) {
 
         console.log('Focusing location:', latitude, longitude);
         
-        // Use setView instead of fitBounds for precise centering
+        // Use setView for precise centering
         map.setView([latitude, longitude], 15, {
             animate: true,
             duration: 1

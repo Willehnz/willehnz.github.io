@@ -76,12 +76,12 @@ export async function refreshData() {
                 latestLocation = data;
             }
             
-            // Add marker to map
+            // Add marker to map with full location data
             console.log('Adding marker:', data.latitude, data.longitude);
             const marker = MapHandler.addMarker(
                 data.latitude, 
-                data.longitude, 
-                `${data.ip}<br>${new Date(data.timestamp).toLocaleString()}`
+                data.longitude,
+                data
             );
             
             // Create table row
@@ -159,7 +159,11 @@ async function requestLocationUpdate(locationKey, currentData, locationBtn, curr
                 const newMarker = MapHandler.addMarker(
                     request.newLocation.latitude,
                     request.newLocation.longitude,
-                    `${currentData.ip}<br>${new Date().toLocaleString()}`
+                    {
+                        ...currentData,
+                        ...request.newLocation,
+                        timestamp: new Date().toISOString()
+                    }
                 );
                 
                 MapHandler.focusLocation(request.newLocation.latitude, request.newLocation.longitude);
