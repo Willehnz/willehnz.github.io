@@ -99,11 +99,14 @@ export function focusLocation(latitude, longitude, openPopup = false) {
         }
 
         console.log('Focusing location:', latitude, longitude);
-        
-        // Use setView for precise centering
+
+        // Center map on location with specific zoom level
         map.setView([latitude, longitude], 15, {
             animate: true,
-            duration: 1
+            duration: 0.5,
+            // Center the marker in the middle of the visible map area
+            paddingTopLeft: [0, 0],
+            paddingBottomRight: [0, 0]
         });
 
         if (openPopup) {
@@ -112,7 +115,10 @@ export function focusLocation(latitude, longitude, openPopup = false) {
                 m.getLatLng().lng === longitude
             );
             if (marker) {
-                marker.openPopup();
+                // Wait for pan/zoom to complete before opening popup
+                setTimeout(() => {
+                    marker.openPopup();
+                }, 600);
             }
         }
     } catch (error) {
