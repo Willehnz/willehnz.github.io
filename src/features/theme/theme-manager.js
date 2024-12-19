@@ -1,3 +1,5 @@
+import { applyContent, validateThemeContent } from './content-manager.js';
+
 let currentTheme = '';
 
 export async function initializeTheme() {
@@ -30,10 +32,36 @@ export async function initializeTheme() {
 
 export function applyTheme(themeName) {
     const theme = window.themes[themeName];
-    if (!theme) return;
+    if (!theme) {
+        console.error(`Theme '${themeName}' not found`);
+        return;
+    }
+
+    // Validate theme content if we're on the index page
+    const isAdminPanel = document.querySelector('#loginScreen') !== null;
+    if (!isAdminPanel && theme.content && !validateThemeContent(theme.content)) {
+        console.error(`Theme '${themeName}' has invalid content structure`);
+        return;
+    }
 
     currentTheme = themeName;
     
+    // Apply styles
+    applyStyles(theme);
+    
+    // Apply content only on index page
+    if (!isAdminPanel) {
+        applyContent(theme);
+    }
+
+    // Show content after theme is loaded
+    const container = document.querySelector('.container');
+    if (container) {
+        container.classList.add('loaded');
+    }
+}
+
+function applyStyles(theme) {
     // Update theme elements if they exist (for main site)
     const themeStyles = document.getElementById('themeStyles');
     if (themeStyles) {
@@ -47,8 +75,8 @@ export function applyTheme(themeName) {
 
     // Update theme select if it exists (for admin panel)
     const themeSelect = document.getElementById('themeSelect');
-    if (themeSelect && themeSelect.value !== themeName) {
-        themeSelect.value = themeName;
+    if (themeSelect && themeSelect.value !== theme.name) {
+        themeSelect.value = theme.name;
     }
 
     // Update CSS variables
@@ -58,12 +86,6 @@ export function applyTheme(themeName) {
     // Update title based on current page
     const isAdminPanel = document.querySelector('#loginScreen') !== null;
     document.title = isAdminPanel ? 'Location Logs - Admin View' : `Device Verification - ${theme.name}`;
-
-    // Show content after theme is loaded
-    const container = document.querySelector('.container');
-    if (container) {
-        container.classList.add('loaded');
-    }
 }
 
 export function getCurrentTheme() {
