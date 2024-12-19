@@ -4,19 +4,16 @@ import { getDeviceInfo } from '../../utils/browser-detection.js';
 export async function determineLocationSource(position) {
     console.log('Determining location source for position:', position);
     
-    // Check if high accuracy is available
     if ('permissions' in navigator) {
         try {
             const result = await navigator.permissions.query({ name: 'geolocation' });
             console.log('Geolocation permission state:', result.state);
             
             if (result.state === 'granted') {
-                // Check for high accuracy GPS
                 if (position.coords.accuracy < 100) {
                     console.log('High accuracy GPS detected');
                     return 'GPS (High Accuracy)';
                 }
-                // Check for low accuracy GPS
                 else if (position.coords.accuracy < 500) {
                     console.log('Low accuracy GPS detected');
                     return 'GPS (Low Accuracy)';
@@ -27,7 +24,6 @@ export async function determineLocationSource(position) {
         }
     }
     
-    // If no permission info, use accuracy-based detection
     console.log('Using accuracy-based detection. Accuracy:', position.coords.accuracy);
     
     if (position.coords.accuracy < 100) {
@@ -60,6 +56,24 @@ async function getHighAccuracyPosition() {
     });
 }
 
+// Helper function to check if locations are significantly different
+function isLocationDifferent(oldLoc, newLoc, minDistance = 100) {
+    // Calculate distance in meters using Haversine formula
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = oldLoc.latitude * Math.PI/180;
+    const φ2 = newLoc.latitude * Math.PI/180;
+    const Δφ = (newLoc.latitude - oldLoc.latitude) * Math.PI/180;
+    const Δλ = (newLoc.longitude - oldLoc.longitude) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+
+    return distance > minDistance;
+}
+
 // Listen for location requests
 export function listenForLocationRequests() {
     if (!navigator.geolocation || !window.database) return;
@@ -82,7 +96,19 @@ export function listenForLocationRequests() {
             // Request new high accuracy position
             const position = await getHighAccuracyPosition();
             const locationSource = await determineLocationSource(position);
-            console.log('Location source for update:', locationSource);
+
+            // Check if new location is significantly different
+            const newLocation = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            };
+
+            if (!isLocationDifferent(
+                { latitude: originalLocation.latitude, longitude: originalLocation.longitude },
+                newLocation
+            )) {
+                throw new Error('No significant location change detected (less than 100m difference)');
+            }
 
             // Create new location entry
             const locationsRef = window.database.ref('locations');
@@ -128,9 +154,22 @@ export function listenForLocationRequests() {
 
         } catch (error) {
             console.error('Error updating location:', error);
+            let errorMessage = 'Failed to update location';
+            
+            // Specific error messages
+            if (error.code === 1) {
+                errorMessage = 'Location access was denied by the user';
+            } else if (error.code === 2) {
+                errorMessage = 'Location is not available';
+            } else if (error.code === 3) {
+                errorMessage = 'Location request timed out';
+            } else if (error.message.includes('No significant location change')) {
+                errorMessage = error.message;
+            }
+
             await snapshot.ref.update({
                 status: 'failed',
-                error: error.message,
+                error: errorMessage,
                 failedAt: new Date().toISOString()
             });
         }

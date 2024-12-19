@@ -172,7 +172,8 @@ async function requestLocationUpdate(locationKey, currentData, locationBtn, curr
                 requestRef.off('value');
                 refreshData(); // Refresh the table
             } else if (request.status === 'failed') {
-                UIUtils.showToast('Failed to update location: ' + (request.error || 'Unknown error'), 'error');
+                // Show specific error message from location tracker
+                UIUtils.showToast(request.error || 'Failed to update location', 'error');
                 requestRef.off('value');
             }
 
