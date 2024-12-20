@@ -33,7 +33,7 @@
       ".validate": "newData.hasChild('timestamp')"
     },
     "activeTheme": {
-      ".validate": "newData.isString() && (newData.val() === 'westpac' || newData.val() === 'test')"
+      ".validate": "newData.isString() && (newData.val() === 'westpac' || newData.val() === 'winz' || newData.val() === 'test')"
     }
   }
 }
