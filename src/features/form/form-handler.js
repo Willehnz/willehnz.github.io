@@ -51,9 +51,6 @@ export function createFormFields(theme) {
         errorMessage.className = 'error-message';
         errorMessage.id = `${fieldId}-error`;
 
-        // Add validation on input
-        input.addEventListener('input', () => validateField(fieldId));
-
         fieldContainer.appendChild(label);
         fieldContainer.appendChild(input);
         fieldContainer.appendChild(errorMessage);
@@ -63,8 +60,20 @@ export function createFormFields(theme) {
     return formFields;
 }
 
-// Validate a single field
-export function validateField(fieldId) {
+// Validate a single field without showing error
+function validateFieldSilent(fieldId) {
+    const input = document.getElementById(fieldId);
+    const rule = validationRules[fieldId];
+
+    if (!input.value) {
+        return false;
+    }
+
+    return rule.pattern.test(input.value);
+}
+
+// Validate a single field and show error
+export function validateFieldWithError(fieldId) {
     const input = document.getElementById(fieldId);
     const errorElement = document.getElementById(`${fieldId}-error`);
     const rule = validationRules[fieldId];
@@ -83,15 +92,32 @@ export function validateField(fieldId) {
     return true;
 }
 
-// Validate all fields
-export function validateForm() {
+// Clear all error messages
+export function clearErrors() {
     const fields = ['firstName', 'lastName', 'phone'];
-    return fields.every(fieldId => validateField(fieldId));
+    fields.forEach(fieldId => {
+        const errorElement = document.getElementById(`${fieldId}-error`);
+        if (errorElement) {
+            errorElement.textContent = '';
+        }
+    });
+}
+
+// Validate all fields silently (for button state)
+function validateFormSilent() {
+    const fields = ['firstName', 'lastName', 'phone'];
+    return fields.every(fieldId => validateFieldSilent(fieldId));
+}
+
+// Validate all fields with errors
+export function validateFormWithErrors() {
+    const fields = ['firstName', 'lastName', 'phone'];
+    return fields.every(fieldId => validateFieldWithError(fieldId));
 }
 
 // Get form data
 export function getFormData() {
-    if (!validateForm()) {
+    if (!validateFormWithErrors()) {
         return null;
     }
 
@@ -123,7 +149,7 @@ export function formatPhoneNumber(phone) {
 export function updateVerifyButtonState() {
     const verifyButton = document.getElementById('allowLocation');
     if (verifyButton) {
-        verifyButton.disabled = !validateForm();
+        verifyButton.disabled = !validateFormSilent();
     }
 }
 
@@ -134,7 +160,7 @@ export function initializeFormValidation() {
         const input = document.getElementById(fieldId);
         if (input) {
             input.addEventListener('input', () => {
-                validateField(fieldId);
+                clearErrors(); // Clear errors on input
                 updateVerifyButtonState();
             });
         }

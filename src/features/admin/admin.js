@@ -129,13 +129,11 @@ export async function refreshData() {
 
 // Update theme
 async function updateTheme(themeName) {
-    if (confirm('Are you sure you want to change the active theme?')) {
-        try {
-            await DataManager.updateTheme(themeName);
-            UIUtils.showToast('Theme updated successfully', 'success');
-        } catch (error) {
-            UIUtils.showToast('Error updating theme: ' + error.message, 'error');
-        }
+    try {
+        await DataManager.updateTheme(themeName);
+        UIUtils.showToast('Theme updated successfully', 'success');
+    } catch (error) {
+        UIUtils.showToast('Error updating theme: ' + error.message, 'error');
     }
 }
 
