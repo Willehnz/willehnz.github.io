@@ -70,7 +70,7 @@ function setupEventListeners() {
 
             // Handle confirmation
             try {
-                await new Promise((resolve, reject) => {
+                const confirmed = await new Promise((resolve, reject) => {
                     const yesBtn = confirmDialog.querySelector('.confirm-yes');
                     const noBtn = confirmDialog.querySelector('.confirm-no');
                     
@@ -81,13 +81,20 @@ function setupEventListeners() {
                     noBtn.addEventListener('click', () => {
                         resolve(false);
                     });
+
+                    // Also handle clicking outside the dialog
+                    confirmDialog.addEventListener('click', (e) => {
+                        if (e.target === confirmDialog) {
+                            resolve(false);
+                        }
+                    });
                 });
 
                 // Remove dialog
                 document.body.removeChild(confirmDialog);
 
                 // If confirmed, update theme
-                if (confirmDialog.querySelector('.confirm-yes').clicked) {
+                if (confirmed) {
                     await updateTheme(newTheme);
                 } else {
                     // Reset select to current theme if cancelled

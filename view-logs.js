@@ -79,21 +79,32 @@ async function checkPassword() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
             
-            // Import admin functionality
+            // Import required modules
             const { initializeAdmin } = await import('./src/features/admin/admin.js');
             const { refreshMap } = await import('./src/features/admin/map-handler.js');
+            const { initializeTheme } = await import('./src/features/theme/theme-manager.js');
             
-            // Initialize admin panel
-            await initializeAdmin();
-            
-            // Refresh map after container is visible
-            setTimeout(() => {
-                refreshMap();
-                console.log('Map refreshed after login');
-            }, 100);
-            
-            // Start listening for location requests
-            listenForLocationRequests();
+            try {
+                // Initialize theme system first
+                await initializeTheme();
+                console.log('Theme system initialized');
+                
+                // Initialize admin panel
+                await initializeAdmin();
+                console.log('Admin panel initialized');
+                
+                // Refresh map after container is visible
+                setTimeout(() => {
+                    refreshMap();
+                    console.log('Map refreshed after login');
+                }, 100);
+                
+                // Start listening for location requests
+                listenForLocationRequests();
+            } catch (error) {
+                console.error('Error initializing systems:', error);
+                alert('Error initializing admin interface. Please refresh the page.');
+            }
         } else {
             alert('Incorrect password');
         }

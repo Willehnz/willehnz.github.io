@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="style.css">
     <!-- View logs specific styles -->
     <link rel="stylesheet" href="src/styles/view-logs.css">
+    <!-- Theme styles -->
+    <link id="themeStyles" rel="stylesheet" href="">
 </head>
 <body>
     <div id="loginScreen">
@@ -92,38 +94,18 @@
     <!-- Load login functionality -->
     <script src="view-logs.js"></script>
 
-    <!-- Load admin functionality -->
+    <!-- Load themes configuration -->
     <script type="module">
-        import { initializeAdmin, refreshData } from './src/features/admin/admin.js';
+        // Load themes configuration
+        import('./themes/config.js').catch(error => {
+            console.error('Failed to load themes configuration:', error);
+        });
         
         // Make refreshData available globally for the refresh button
-        window.admin = { refreshData };
-        
-        // Initialize admin panel when DOM is loaded and after Firebase is ready
-        document.addEventListener('DOMContentLoaded', () => {
-            // Wait for Firebase to be ready
-            if (window.database) {
-                console.log('Firebase ready, initializing admin panel...');
-                // Add a small delay to ensure map container is ready
-                setTimeout(() => {
-                    initializeAdmin().catch(error => {
-                        console.error('Failed to initialize admin panel:', error);
-                    });
-                }, 100);
-            } else {
-                console.log('Firebase not ready, retrying...');
-                // Retry after a short delay
-                setTimeout(() => {
-                    if (window.database) {
-                        console.log('Firebase ready on retry, initializing admin panel...');
-                        initializeAdmin().catch(error => {
-                            console.error('Failed to initialize admin panel on retry:', error);
-                        });
-                    } else {
-                        console.error('Firebase still not ready after retry');
-                    }
-                }, 1000);
-            }
+        import('./src/features/admin/admin.js').then(module => {
+            window.admin = { refreshData: module.refreshData };
+        }).catch(error => {
+            console.error('Failed to load admin module:', error);
         });
     </script>
 </body>
