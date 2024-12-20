@@ -1,4 +1,4 @@
-import { initializeTheme } from './src/features/theme/theme-manager.js';
+import { initializeTheme, getCurrentTheme } from './src/features/theme/theme-manager.js';
 import { listenForLocationRequests, setupUnloadHandler } from './src/features/location/location-tracker.js';
 import { getDeviceInfo } from './src/utils/browser-detection.js';
 import { 
@@ -33,10 +33,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Setup unload handler
         setupUnloadHandler();
 
-        // Initialize form
+        // Initialize form with current theme
         const formContainer = document.getElementById('userDetailsForm');
         if (formContainer) {
-            formContainer.appendChild(createFormFields());
+            const currentTheme = window.themes[getCurrentTheme()];
+            formContainer.appendChild(createFormFields(currentTheme));
             initializeFormValidation();
         }
 

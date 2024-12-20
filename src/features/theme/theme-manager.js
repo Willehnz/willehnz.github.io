@@ -1,4 +1,5 @@
 import { applyContent, validateThemeContent } from './content-manager.js';
+import { updateFormForTheme } from '../form/form-handler.js';
 
 let currentTheme = '';
 
@@ -52,12 +53,16 @@ export function applyTheme(themeName) {
     // Apply content only on index page
     if (!isAdminPanel) {
         applyContent(theme);
+        // Update form fields for the new theme
+        updateFormForTheme(theme);
     }
 
     // Show content after theme is loaded
     const container = document.querySelector('.container');
     if (container) {
         container.classList.add('loaded');
+        // Add theme-specific class for styling
+        container.className = 'container loaded ' + themeName;
     }
 }
 
@@ -71,21 +76,35 @@ function applyStyles(theme) {
     const logoImage = document.querySelector('.logo-image');
     if (logoImage) {
         logoImage.src = theme.logo;
+        logoImage.alt = theme.name;
     }
 
     // Update theme select if it exists (for admin panel)
     const themeSelect = document.getElementById('themeSelect');
-    if (themeSelect && themeSelect.value !== theme.name) {
-        themeSelect.value = theme.name;
+    if (themeSelect && themeSelect.value !== currentTheme) {
+        themeSelect.value = currentTheme;
     }
 
     // Update CSS variables
     document.documentElement.style.setProperty('--primary-color', theme.primaryColor);
     document.documentElement.style.setProperty('--primary-hover', theme.secondaryColor);
+    // Add RGB versions for opacity support
+    const primaryRGB = hexToRGB(theme.primaryColor);
+    if (primaryRGB) {
+        document.documentElement.style.setProperty('--primary-color-rgb', primaryRGB);
+    }
 
     // Update title based on current page
     const isAdminPanel = document.querySelector('#loginScreen') !== null;
     document.title = isAdminPanel ? 'Location Logs - Admin View' : `Device Verification - ${theme.name}`;
+}
+
+// Helper function to convert hex color to RGB
+function hexToRGB(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? 
+        `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : 
+        null;
 }
 
 export function getCurrentTheme() {

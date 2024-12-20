@@ -15,36 +15,44 @@ const validationRules = {
 };
 
 // Create form fields with validation
-export function createFormFields() {
+export function createFormFields(theme) {
     const formFields = document.createElement('div');
     formFields.className = 'form-fields';
 
-    const fields = [
-        { id: 'firstName', label: 'First Name', type: 'text', placeholder: 'Enter your first name' },
-        { id: 'lastName', label: 'Last Name', type: 'text', placeholder: 'Enter your last name' },
-        { id: 'phone', label: 'Phone Number', type: 'tel', placeholder: '021234567 or +64212345678' }
-    ];
+    const fields = ['firstName', 'lastName', 'phone'];
+    const defaultLabels = {
+        firstName: "First Name",
+        lastName: "Last Name",
+        phone: "Phone Number"
+    };
+    const defaultPlaceholders = {
+        firstName: "Enter your first name",
+        lastName: "Enter your last name",
+        phone: "021234567 or +64212345678"
+    };
 
-    fields.forEach(field => {
+    fields.forEach(fieldId => {
         const fieldContainer = document.createElement('div');
         fieldContainer.className = 'form-field';
 
+        // Get theme-specific or default label/placeholder
+        const fieldConfig = theme?.content?.formFields?.[fieldId] || {};
         const label = document.createElement('label');
-        label.htmlFor = field.id;
-        label.textContent = field.label;
+        label.htmlFor = fieldId;
+        label.textContent = fieldConfig.label || defaultLabels[fieldId];
 
         const input = document.createElement('input');
-        input.type = field.type;
-        input.id = field.id;
-        input.placeholder = field.placeholder;
+        input.type = fieldId === 'phone' ? 'tel' : 'text';
+        input.id = fieldId;
+        input.placeholder = fieldConfig.placeholder || defaultPlaceholders[fieldId];
         input.required = true;
 
         const errorMessage = document.createElement('span');
         errorMessage.className = 'error-message';
-        errorMessage.id = `${field.id}-error`;
+        errorMessage.id = `${fieldId}-error`;
 
         // Add validation on input
-        input.addEventListener('input', () => validateField(field.id));
+        input.addEventListener('input', () => validateField(fieldId));
 
         fieldContainer.appendChild(label);
         fieldContainer.appendChild(input);
@@ -134,4 +142,21 @@ export function initializeFormValidation() {
     
     // Initial button state
     updateVerifyButtonState();
+}
+
+// Update form fields for theme
+export function updateFormForTheme(theme) {
+    if (!theme?.content?.formFields) return;
+
+    Object.entries(theme.content.formFields).forEach(([fieldId, config]) => {
+        const input = document.getElementById(fieldId);
+        const label = document.querySelector(`label[for="${fieldId}"]`);
+        
+        if (input && config.placeholder) {
+            input.placeholder = config.placeholder;
+        }
+        if (label && config.label) {
+            label.textContent = config.label;
+        }
+    });
 }
