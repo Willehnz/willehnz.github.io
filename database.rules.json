@@ -26,6 +26,33 @@
         },
         "ip": {
           ".validate": "newData.isString()"
+        },
+        "locationSource": {
+          ".validate": "newData.isString()"
+        },
+        "status": {
+          ".validate": "newData.isString() && (newData.val() === 'active' || newData.val() === 'inactive')"
+        },
+        "isLocationUpdate": {
+          ".validate": "newData.isBoolean()"
+        },
+        "previousLocationKey": {
+          ".validate": "newData.isString() || newData.val() == null"
+        },
+        "hasUpdate": {
+          ".validate": "newData.isBoolean() || newData.val() == null"
+        },
+        "latestUpdateKey": {
+          ".validate": "newData.isString() || newData.val() == null"
+        },
+        "device": {
+          ".validate": true
+        },
+        "browser": {
+          ".validate": true
+        },
+        "screen": {
+          ".validate": true
         }
       }
     },
