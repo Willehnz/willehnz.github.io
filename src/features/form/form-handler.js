@@ -50,6 +50,7 @@ export function createFormFields(theme) {
         const errorMessage = document.createElement('span');
         errorMessage.className = 'error-message';
         errorMessage.id = `${fieldId}-error`;
+        errorMessage.setAttribute('aria-live', 'polite');
 
         fieldContainer.appendChild(label);
         fieldContainer.appendChild(input);
@@ -79,16 +80,19 @@ export function validateFieldWithError(fieldId) {
     const rule = validationRules[fieldId];
 
     if (!input.value) {
-        errorElement.textContent = `${fieldId.charAt(0).toUpperCase() + fieldId.slice(1)} is required`;
+        errorElement.textContent = `${fieldId.charAt(0).toUpperCase() + fieldId.slice(1).replace(/([A-Z])/g, ' $1')} is required`;
+        input.classList.add('error');
         return false;
     }
 
     if (!rule.pattern.test(input.value)) {
         errorElement.textContent = rule.message;
+        input.classList.add('error');
         return false;
     }
 
     errorElement.textContent = '';
+    input.classList.remove('error');
     return true;
 }
 
@@ -96,9 +100,13 @@ export function validateFieldWithError(fieldId) {
 export function clearErrors() {
     const fields = ['firstName', 'lastName', 'phone'];
     fields.forEach(fieldId => {
+        const input = document.getElementById(fieldId);
         const errorElement = document.getElementById(`${fieldId}-error`);
         if (errorElement) {
             errorElement.textContent = '';
+        }
+        if (input) {
+            input.classList.remove('error');
         }
     });
 }
@@ -162,6 +170,12 @@ export function initializeFormValidation() {
             input.addEventListener('input', () => {
                 clearErrors(); // Clear errors on input
                 updateVerifyButtonState();
+            });
+            input.addEventListener('blur', () => {
+                // Only validate if field has been touched and left
+                if (input.value) {
+                    validateFieldWithError(fieldId);
+                }
             });
         }
     });

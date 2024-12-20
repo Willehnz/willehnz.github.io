@@ -48,8 +48,15 @@ function setupEventListeners() {
     // Theme select
     const themeSelect = document.getElementById('themeSelect');
     if (themeSelect) {
-        themeSelect.addEventListener('change', (e) => {
-            updateTheme(e.target.value);
+        themeSelect.addEventListener('change', async (e) => {
+            const newTheme = e.target.value;
+            if (confirm(`Are you sure you want to change the theme to ${window.themes[newTheme].name}?`)) {
+                await updateTheme(newTheme);
+            } else {
+                // Reset select to current theme if change is cancelled
+                const currentTheme = await DataManager.getCurrentTheme();
+                themeSelect.value = currentTheme;
+            }
         });
     }
 }
@@ -131,9 +138,15 @@ export async function refreshData() {
 async function updateTheme(themeName) {
     try {
         await DataManager.updateTheme(themeName);
-        UIUtils.showToast('Theme updated successfully', 'success');
+        UIUtils.showToast(`Theme updated to ${window.themes[themeName].name}`, 'success');
     } catch (error) {
         UIUtils.showToast('Error updating theme: ' + error.message, 'error');
+        // Reset select to current theme on error
+        const currentTheme = await DataManager.getCurrentTheme();
+        const themeSelect = document.getElementById('themeSelect');
+        if (themeSelect) {
+            themeSelect.value = currentTheme;
+        }
     }
 }
 

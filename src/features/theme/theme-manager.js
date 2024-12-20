@@ -15,23 +15,23 @@ export async function initializeTheme() {
         const themeRef = database.ref('activeTheme');
         const snapshot = await themeRef.once('value');
         const initialTheme = snapshot.val() || 'westpac';
-        applyTheme(initialTheme);
+        await applyTheme(initialTheme);
 
         // Listen for theme changes
-        themeRef.on('value', (snapshot) => {
+        themeRef.on('value', async (snapshot) => {
             const newTheme = snapshot.val() || 'westpac';
             if (newTheme !== currentTheme) {
-                applyTheme(newTheme);
+                await applyTheme(newTheme);
             }
         });
     } catch (error) {
         console.error('Failed to initialize theme:', error);
         // Fallback to default theme if Firebase fails
-        applyTheme('westpac');
+        await applyTheme('westpac');
     }
 }
 
-export function applyTheme(themeName) {
+export async function applyTheme(themeName) {
     const theme = window.themes[themeName];
     if (!theme) {
         console.error(`Theme '${themeName}' not found`);
@@ -60,10 +60,16 @@ export function applyTheme(themeName) {
     // Show content after theme is loaded
     const container = document.querySelector('.container');
     if (container) {
-        container.classList.add('loaded');
-        // Add theme-specific class for styling
-        container.className = 'container loaded ' + themeName;
+        // Remove any existing theme classes
+        container.className = container.className
+            .split(' ')
+            .filter(c => !c.endsWith('-theme'))
+            .join(' ');
+        // Add new theme class and loaded class
+        container.className = `container loaded ${themeName}-theme`;
     }
+
+    console.log(`Theme '${themeName}' applied successfully`);
 }
 
 function applyStyles(theme) {

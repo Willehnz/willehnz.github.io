@@ -35,9 +35,16 @@
 }
 
 .form-field .error-message {
-    display: block;
+    display: none; /* Hide by default */
     color: #dc3545;
     font-size: 14px;
+    margin-top: 5px;
+    min-height: 0; /* Remove min-height */
+}
+
+/* Only show error message when it has content */
+.form-field .error-message:not(:empty) {
+    display: block;
     margin-top: 5px;
     min-height: 20px;
 }
@@ -71,12 +78,12 @@
 }
 
 /* Theme-specific form styles */
-.westpac .form-field input:focus {
+.westpac-theme .form-field input:focus {
     border-color: #DA1710;
     box-shadow: 0 0 0 2px rgba(218, 23, 16, 0.1);
 }
 
-.winz .form-field input:focus {
+.winz-theme .form-field input:focus {
     border-color: #0066CC;
     box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
 }
