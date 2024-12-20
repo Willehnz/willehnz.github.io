@@ -120,7 +120,11 @@ export function createLocationRow(data, locationKey, onRequestLocation, onDelete
     
     // Source
     const sourceCell = row.insertCell();
-    sourceCell.textContent = data.locationSource || 'Unknown';
+    const sourceSpan = document.createElement('span');
+    sourceSpan.className = `location-source ${(data.locationSource || 'unknown').toLowerCase().replace(/[\s()]/g, '-')}`;
+    sourceSpan.textContent = data.locationSource || 'Unknown';
+    sourceSpan.setAttribute('title', `Accuracy: ${data.accuracy ? `±${Math.round(data.accuracy)}m` : 'Unknown'}`);
+    sourceCell.appendChild(sourceSpan);
     
     // Browser & Device
     const browserCell = row.insertCell();

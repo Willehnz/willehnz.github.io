@@ -178,6 +178,66 @@
 }
 
 /* Location Source Styles */
+.location-source {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #f0f0f0;
+    color: #666;
+}
+
+.location-source.gps-high-accuracy {
+    background: #d4edda;
+    color: #155724;
+}
+
+.location-source.gps-low-accuracy {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.location-source.wifi-high-accuracy {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.location-source.wifi {
+    background: #e2e3ff;
+    color: #0c1361;
+}
+
+.location-source.wifi-low-accuracy {
+    background: #e2e3ff;
+    color: #383b61;
+}
+
+.location-source.cell-tower-high-accuracy {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.location-source.cell-tower {
+    background: #ffe5e8;
+    color: #8b2229;
+}
+
+.location-source.cell-tower-low-accuracy {
+    background: #ffe5e8;
+    color: #a5474d;
+}
+
+.location-source.ip-based {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.location-source.unknown {
+    background: #f8f9fa;
+    color: #6c757d;
+}
+
 .denied-indicator {
     color: #DA1710;
     margin-right: 4px;

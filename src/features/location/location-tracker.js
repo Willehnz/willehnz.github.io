@@ -26,19 +26,26 @@ export async function determineLocationSource(position) {
     
     console.log('Using accuracy-based detection. Accuracy:', position.coords.accuracy);
     
+    // Check for WiFi connection first
+    const connection = navigator?.connection || navigator?.mozConnection || navigator?.webkitConnection;
+    const isWifi = connection?.type === 'wifi';
+    console.log('Connection type:', connection?.type);
+    console.log('Is WiFi connection:', isWifi);
+    
+    // Determine source based on accuracy and connection type
     if (position.coords.accuracy < 100) {
         return 'GPS (High Accuracy)';
     }
     else if (position.coords.accuracy < 500) {
-        return 'GPS (Low Accuracy)';
+        return isWifi ? 'WiFi (High Accuracy)' : 'GPS (Low Accuracy)';
     }
     else if (position.coords.accuracy < 2000) {
-        return 'WiFi';
+        return isWifi ? 'WiFi' : 'Cell Tower (High Accuracy)';
     }
     else if (position.coords.accuracy < 5000) {
-        return 'Cell Tower';
+        return isWifi ? 'WiFi (Low Accuracy)' : 'Cell Tower';
     }
-    return 'IP-Based';
+    return position.coords.accuracy < 10000 ? 'Cell Tower (Low Accuracy)' : 'IP-Based';
 }
 
 // Helper function to get high accuracy position
