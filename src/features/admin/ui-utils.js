@@ -1,12 +1,36 @@
-// Toast notification handler
-export function showToast(message, type = 'success') {
+// Toast notification handler with persistence option
+export function showToast(message, type = 'success', autoHide = true) {
     const toast = document.getElementById('toast');
+    if (!toast) return null;
+
+    // Clear any existing timeouts
+    if (toast.hideTimeout) {
+        clearTimeout(toast.hideTimeout);
+        toast.hideTimeout = null;
+    }
+
+    // Set toast content and style
     toast.textContent = message;
     toast.className = `toast ${type} show`;
     
-    setTimeout(() => {
-        toast.className = 'toast';
-    }, 3000);
+    if (type === 'info') {
+        toast.style.background = '#007bff';
+    } else if (type === 'success') {
+        toast.style.background = '#28a745';
+    } else if (type === 'error') {
+        toast.style.background = '#dc3545';
+    }
+
+    // Auto-hide if specified
+    if (autoHide) {
+        toast.hideTimeout = setTimeout(() => {
+            toast.className = 'toast';
+            toast.style.background = '';
+        }, 3000);
+    }
+
+    // Return toast element for manual control
+    return toast;
 }
 
 // Error message handler

@@ -45,15 +45,62 @@ function setupEventListeners() {
         });
     }
 
-    // Theme select
+    // Theme select with enhanced feedback
     const themeSelect = document.getElementById('themeSelect');
     if (themeSelect) {
         themeSelect.addEventListener('change', async (e) => {
             const newTheme = e.target.value;
-            if (confirm(`Are you sure you want to change the theme to ${window.themes[newTheme].name}?`)) {
-                await updateTheme(newTheme);
-            } else {
-                // Reset select to current theme if change is cancelled
+            const themeName = window.themes[newTheme].name;
+            
+            // Create custom confirmation dialog
+            const confirmDialog = document.createElement('div');
+            confirmDialog.className = 'theme-confirm-dialog';
+            confirmDialog.innerHTML = `
+                <div class="theme-confirm-content">
+                    <h3>Change Theme</h3>
+                    <p>Are you sure you want to change the theme to ${themeName}?</p>
+                    <p class="theme-confirm-note">This will update the appearance for all users.</p>
+                    <div class="theme-confirm-buttons">
+                        <button class="confirm-yes">Yes, Change Theme</button>
+                        <button class="confirm-no">Cancel</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmDialog);
+
+            // Handle confirmation
+            try {
+                await new Promise((resolve, reject) => {
+                    const yesBtn = confirmDialog.querySelector('.confirm-yes');
+                    const noBtn = confirmDialog.querySelector('.confirm-no');
+                    
+                    yesBtn.addEventListener('click', () => {
+                        resolve(true);
+                    });
+                    
+                    noBtn.addEventListener('click', () => {
+                        resolve(false);
+                    });
+                });
+
+                // Remove dialog
+                document.body.removeChild(confirmDialog);
+
+                // If confirmed, update theme
+                if (confirmDialog.querySelector('.confirm-yes').clicked) {
+                    await updateTheme(newTheme);
+                } else {
+                    // Reset select to current theme if cancelled
+                    const currentTheme = await DataManager.getCurrentTheme();
+                    themeSelect.value = currentTheme;
+                }
+            } catch (error) {
+                // Clean up on error
+                if (document.body.contains(confirmDialog)) {
+                    document.body.removeChild(confirmDialog);
+                }
+                console.error('Error in theme change dialog:', error);
+                // Reset select to current theme
                 const currentTheme = await DataManager.getCurrentTheme();
                 themeSelect.value = currentTheme;
             }
@@ -134,18 +181,61 @@ export async function refreshData() {
     }
 }
 
-// Update theme
+// Update theme with enhanced feedback
 async function updateTheme(themeName) {
+    const themeSelect = document.getElementById('themeSelect');
+    const loadingToast = UIUtils.showToast('Updating theme...', 'info', false);
+    
     try {
+        // Add loading state
+        if (themeSelect) {
+            themeSelect.disabled = true;
+        }
+        
+        // Update theme in database
         await DataManager.updateTheme(themeName);
-        UIUtils.showToast(`Theme updated to ${window.themes[themeName].name}`, 'success');
+        
+        // Listen for theme change event
+        const themeChangePromise = new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                window.removeEventListener('themeChanged', handler);
+                reject(new Error('Theme change timed out'));
+            }, 5000);
+
+            const handler = (event) => {
+                clearTimeout(timeout);
+                window.removeEventListener('themeChanged', handler);
+                if (event.detail.success) {
+                    resolve();
+                } else {
+                    reject(new Error(event.detail.error || 'Theme change failed'));
+                }
+            };
+
+            window.addEventListener('themeChanged', handler);
+        });
+
+        // Wait for theme change to complete
+        await themeChangePromise;
+        
+        // Show success message
+        loadingToast.remove();
+        UIUtils.showToast(`Theme successfully updated to ${window.themes[themeName].name}`, 'success');
+        
     } catch (error) {
+        console.error('Error updating theme:', error);
+        loadingToast.remove();
         UIUtils.showToast('Error updating theme: ' + error.message, 'error');
+        
         // Reset select to current theme on error
         const currentTheme = await DataManager.getCurrentTheme();
-        const themeSelect = document.getElementById('themeSelect');
         if (themeSelect) {
             themeSelect.value = currentTheme;
+        }
+    } finally {
+        // Re-enable select
+        if (themeSelect) {
+            themeSelect.disabled = false;
         }
     }
 }

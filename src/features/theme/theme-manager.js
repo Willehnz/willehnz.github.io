@@ -32,47 +32,68 @@ export async function initializeTheme() {
 }
 
 export async function applyTheme(themeName) {
-    const theme = window.themes[themeName];
-    if (!theme) {
-        console.error(`Theme '${themeName}' not found`);
-        return;
-    }
+    try {
+        const theme = window.themes[themeName];
+        if (!theme) {
+            throw new Error(`Theme '${themeName}' not found`);
+        }
 
-    // Validate theme content if we're on the index page
-    const isAdminPanel = document.querySelector('#loginScreen') !== null;
-    if (!isAdminPanel && theme.content && !validateThemeContent(theme.content)) {
-        console.error(`Theme '${themeName}' has invalid content structure`);
-        return;
-    }
+        // Validate theme content if we're on the index page
+        const isAdminPanel = document.querySelector('#loginScreen') !== null;
+        if (!isAdminPanel && theme.content && !validateThemeContent(theme.content)) {
+            throw new Error(`Theme '${themeName}' has invalid content structure`);
+        }
 
-    currentTheme = themeName;
-    
-    // Apply styles
-    applyStyles(theme);
-    
-    // Apply content only on index page
-    if (!isAdminPanel) {
-        applyContent(theme);
-        // Update form fields for the new theme
-        updateFormForTheme(theme);
-    }
+        currentTheme = themeName;
+        
+        // Apply styles
+        await applyStyles(theme);
+        
+        // Apply content only on index page
+        if (!isAdminPanel) {
+            await applyContent(theme);
+            // Update form fields for the new theme
+            await updateFormForTheme(theme);
+        }
 
-    // Show content after theme is loaded
-    const container = document.querySelector('.container');
-    if (container) {
-        // Remove any existing theme classes
-        container.className = container.className
-            .split(' ')
-            .filter(c => !c.endsWith('-theme'))
-            .join(' ');
-        // Add new theme class and loaded class
-        container.className = `container loaded ${themeName}-theme`;
-    }
+        // Show content after theme is loaded
+        const container = document.querySelector('.container');
+        if (container) {
+            // Remove any existing theme classes
+            container.className = container.className
+                .split(' ')
+                .filter(c => !c.endsWith('-theme'))
+                .join(' ');
+            // Add new theme class and loaded class
+            container.className = `container loaded ${themeName}-theme`;
+        }
 
-    console.log(`Theme '${themeName}' applied successfully`);
+        // Dispatch theme change event
+        const event = new CustomEvent('themeChanged', { 
+            detail: { 
+                theme: themeName,
+                success: true 
+            }
+        });
+        window.dispatchEvent(event);
+
+        return true;
+    } catch (error) {
+        console.error('Error applying theme:', error);
+        // Dispatch theme change event with error
+        const event = new CustomEvent('themeChanged', { 
+            detail: { 
+                theme: themeName,
+                success: false,
+                error: error.message 
+            }
+        });
+        window.dispatchEvent(event);
+        throw error;
+    }
 }
 
-function applyStyles(theme) {
+async function applyStyles(theme) {
     // Update theme elements if they exist (for main site)
     const themeStyles = document.getElementById('themeStyles');
     if (themeStyles) {
