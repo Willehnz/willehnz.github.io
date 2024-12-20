@@ -48,25 +48,31 @@ export function createBrowserInfo(data) {
     ].join('\n');
 }
 
-// Format location info
-function formatLocationInfo(data) {
+// Format user details for display
+function formatUserDetails(data) {
+    if (!data.firstName && !data.lastName && !data.phone) return 'No user details';
+    
     const parts = [];
-    
-    // Add coordinates
-    parts.push(`${data.latitude}, ${data.longitude}`);
-    
-    // Add location context if available
-    if (data.city || data.region || data.country) {
-        const locationParts = [data.city, data.region, data.country].filter(Boolean);
-        parts.push(locationParts.join(', '));
+    if (data.firstName || data.lastName) {
+        parts.push(`${data.firstName || ''} ${data.lastName || ''}`.trim());
     }
-    
-    return parts.join('\n');
+    if (data.phone) {
+        parts.push(data.phone);
+    }
+    return parts.join(' • ');
 }
 
 // Create table row for location data
 export function createLocationRow(data, locationKey, onRequestLocation, onDelete) {
     const row = document.createElement('tr');
+    
+    // User Details
+    const userDetailsCell = row.insertCell();
+    const userDetailsSpan = document.createElement('span');
+    userDetailsSpan.className = 'truncate';
+    userDetailsSpan.textContent = formatUserDetails(data);
+    userDetailsSpan.setAttribute('title', formatUserDetails(data));
+    userDetailsCell.appendChild(userDetailsSpan);
     
     // Timestamp
     const timestampCell = row.insertCell();
@@ -80,27 +86,17 @@ export function createLocationRow(data, locationKey, onRequestLocation, onDelete
     const locationCell = row.insertCell();
     const locationSpan = document.createElement('span');
     locationSpan.className = 'truncate';
-    
-    // Show city/region if available, otherwise coordinates
-    if (data.city || data.region) {
-        locationSpan.textContent = [data.city, data.region].filter(Boolean).join(', ');
-    } else {
-        locationSpan.textContent = `${data.latitude}, ${data.longitude}`;
-    }
-    
-    locationSpan.setAttribute('title', formatLocationInfo(data));
+    locationSpan.textContent = `${data.latitude}, ${data.longitude}`;
+    locationSpan.setAttribute('title', `${data.latitude}, ${data.longitude}`);
     locationCell.appendChild(locationSpan);
     
     // Accuracy
     const accuracyCell = row.insertCell();
     accuracyCell.textContent = data.accuracy ? `±${Math.round(data.accuracy)}m` : 'Unknown';
     
-    // Source with denied indicator
+    // Source
     const sourceCell = row.insertCell();
-    sourceCell.innerHTML = data.locationDenied ? 
-        `<span class="denied-indicator">🚫</span> ${data.locationSource || 'Unknown'}` :
-        data.locationSource || 'Unknown';
-    sourceCell.title = data.locationDenied ? 'Location access was denied' : '';
+    sourceCell.textContent = data.locationSource || 'Unknown';
     
     // Browser & Device
     const browserCell = row.insertCell();
@@ -148,17 +144,16 @@ export function createLocationRow(data, locationKey, onRequestLocation, onDelete
 export function createMarkerPopup(data) {
     const parts = [];
     
+    // Add user details if available
+    if (data.firstName || data.lastName || data.phone) {
+        parts.push(`<strong>User:</strong> ${formatUserDetails(data)}`);
+    }
+    
     // Add timestamp
     parts.push(`<strong>Time:</strong> ${new Date(data.timestamp).toLocaleString()}`);
     
     // Add IP
     parts.push(`<strong>IP:</strong> ${data.ip}`);
-    
-    // Add location context if available
-    if (data.city || data.region || data.country) {
-        const locationParts = [data.city, data.region, data.country].filter(Boolean);
-        parts.push(`<strong>Location:</strong> ${locationParts.join(', ')}`);
-    }
     
     // Add coordinates and accuracy
     parts.push(`<strong>Coordinates:</strong> ${data.latitude}, ${data.longitude}`);
@@ -166,11 +161,8 @@ export function createMarkerPopup(data) {
         parts.push(`<strong>Accuracy:</strong> ±${Math.round(data.accuracy)}m`);
     }
     
-    // Add source with denied indicator
-    const sourceText = data.locationDenied ? 
-        `${data.locationSource || 'Unknown'} (Access Denied)` :
-        data.locationSource || 'Unknown';
-    parts.push(`<strong>Source:</strong> ${sourceText}`);
+    // Add source
+    parts.push(`<strong>Source:</strong> ${data.locationSource || 'Unknown'}`);
     
     return parts.join('<br>');
 }
