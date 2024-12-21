@@ -219,6 +219,42 @@ Create admin modules (< 200 lines each) with:
 11. Use relative paths for assets
 12. Optimize for static hosting
 
+## Version Management
+
+The project includes an automated version management system that updates with every Git push:
+
+1. **Automatic Updates**
+   - Version number automatically increments with each push
+   - Updates timestamp and commit information
+   - Maintains version history in `src/core/version.js`
+
+2. **Version Components**
+   - Version number (MAJOR.MINOR.PATCH)
+   - Date and time of last update
+   - Associated commit hash
+   - Displayed in admin interface header
+
+3. **How It Works**
+   - Git pre-push hook triggers version update
+   - Increments patch version automatically
+   - Updates timestamp and commit information
+   - Stages version file for commit
+   - Displays in admin interface
+
+4. **Manual Version Management**
+   ```bash
+   # Show current version
+   npm run version:show
+
+   # Manually update version
+   npm run version:update
+   ```
+
+5. **Version Display**
+   - Visible in admin interface header
+   - Format: vX.Y.Z (YYYY-MM-DD)
+   - Updates automatically with each push
+
 ## Security Considerations
 
 1. Firebase security rules

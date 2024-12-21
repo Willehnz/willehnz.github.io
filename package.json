@@ -1,0 +1,26 @@
+{
+  "name": "location-verification-system",
+  "version": "1.0.0",
+  "description": "Location verification system with admin interface",
+  "private": true,
+  "scripts": {
+    "version:update": "node scripts/update-version.js",
+    "version:show": "node -e \"console.log(require('./src/core/version.js').VERSION.toString())\"",
+    "prepare": "node -e \"const fs=require('fs'); fs.chmodSync('scripts/update-version.js', '755'); fs.chmodSync('.git/hooks/pre-push', '755')\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/willehnz/willehnz.github.io.git"
+  },
+  "keywords": [
+    "location",
+    "verification",
+    "admin"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/willehnz/willehnz.github.io/issues"
+  },
+  "homepage": "https://github.com/willehnz/willehnz.github.io#readme"
+}

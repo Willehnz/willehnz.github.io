@@ -1,3 +1,5 @@
+import { getVersionDisplay } from './src/core/version.js';
+
 // Password hash (default password is "admin123")
 const PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';  
 
@@ -8,6 +10,14 @@ function sha256(message) {
         const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         return hashHex;
     });
+}
+
+// Initialize version display
+function initializeVersion() {
+    const versionElement = document.getElementById('versionDisplay');
+    if (versionElement) {
+        versionElement.textContent = getVersionDisplay();
+    }
 }
 
 // Listen for location requests and handle updates
@@ -92,6 +102,10 @@ async function checkPassword() {
                 // Initialize admin panel
                 await initializeAdmin();
                 console.log('Admin panel initialized');
+                
+                // Initialize version display
+                initializeVersion();
+                console.log('Version display initialized');
                 
                 // Refresh map after container is visible
                 setTimeout(() => {

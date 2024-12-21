@@ -28,7 +28,10 @@
     
     <div id="mainContent" style="display: none;">
         <nav class="nav-header">
-            <div class="nav-title">Location Logs</div>
+            <div class="nav-title">
+                Location Logs
+                <span id="versionDisplay" class="version-display"></span>
+            </div>
             <div class="nav-controls">
                 <div class="nav-group">
                     <button class="button" onclick="window.admin.refreshData()">Refresh Data</button>
@@ -92,7 +95,7 @@
     <script src="src/core/firebase-init.js"></script>
     
     <!-- Load login functionality -->
-    <script src="view-logs.js"></script>
+    <script type="module" src="view-logs.js"></script>
 
     <!-- Load themes configuration -->
     <script type="module">
