@@ -51,9 +51,32 @@ export async function determineLocationSource(position) {
 // Helper function to get high accuracy position
 async function getHighAccuracyPosition() {
     return new Promise((resolve, reject) => {
+        // Clear any cached permissions to ensure re-prompting
+        if (navigator.permissions && navigator.permissions.query) {
+            navigator.permissions.query({ name: 'geolocation' })
+                .then(permissionStatus => {
+                    console.log('Permission status before request:', permissionStatus.state);
+                    
+                    // Reset permission state if it's not granted
+                    if (permissionStatus.state !== 'granted') {
+                        // Force a new permission prompt by revoking any existing permission
+                        navigator.permissions.revoke?.({ name: 'geolocation' })
+                            .catch(error => console.log('Error revoking permission:', error));
+                    }
+                })
+                .catch(error => console.log('Error querying permission:', error));
+        }
+
+        // Request position with high accuracy
         navigator.geolocation.getCurrentPosition(
             resolve,
-            reject,
+            (error) => {
+                console.log('Geolocation error:', error);
+                if (error.code === 1) { // Permission denied
+                    console.log('Location permission denied, using IP fallback');
+                }
+                reject(error);
+            },
             {
                 enableHighAccuracy: true,
                 timeout: 20000,
@@ -93,14 +116,6 @@ export function listenForLocationRequests() {
         if (!request || request.status !== 'pending') return;
 
         try {
-            // First check if we can get location permission
-            if ('permissions' in navigator) {
-                const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-                if (permissionStatus.state === 'denied') {
-                    throw { code: 1, message: 'Location access is denied' };
-                }
-            }
-
             // Get the original location to update
             const locationRef = window.database.ref('locations/' + request.locationKey);
             const locationSnapshot = await locationRef.once('value');
@@ -114,29 +129,72 @@ export function listenForLocationRequests() {
                 throw new Error('Location record is no longer active');
             }
 
-            // Try to get new location
-            const position = await getHighAccuracyPosition();
-            
+            let position;
+            let locationSource = 'IP-Based';
+            let useIpFallback = false;
+
+            // Check permission state
+            if ('permissions' in navigator) {
+                const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+                console.log('Current permission state:', permissionStatus.state);
+                
+                // If permission is denied, use IP fallback
+                if (permissionStatus.state === 'denied') {
+                    useIpFallback = true;
+                }
+            }
+
+            // Try to get location if not using IP fallback
+            if (!useIpFallback) {
+                try {
+                    position = await getHighAccuracyPosition();
+                    locationSource = await determineLocationSource(position);
+                } catch (geoError) {
+                    console.log('Geolocation error:', geoError);
+                    useIpFallback = true;
+                }
+            }
+
+            // IP-based fallback
+            if (useIpFallback) {
+                console.log('Using IP-based location fallback');
+                try {
+                    const ipResponse = await fetch('https://ipapi.co/json/');
+                    const ipData = await ipResponse.json();
+                    
+                    position = {
+                        coords: {
+                            latitude: parseFloat(ipData.latitude),
+                            longitude: parseFloat(ipData.longitude),
+                            accuracy: 10000 // IP-based accuracy is typically low
+                        }
+                    };
+                    locationSource = 'IP-Based';
+                } catch (ipError) {
+                    console.error('Error getting IP-based location:', ipError);
+                    throw new Error('Failed to get location from both GPS and IP');
+                }
+            }
+        
             // Verify we got actual coordinates
-            if (!position.coords || typeof position.coords.latitude !== 'number' || typeof position.coords.longitude !== 'number') {
+            if (!position?.coords || typeof position.coords.latitude !== 'number' || typeof position.coords.longitude !== 'number') {
                 throw new Error('Invalid location data received');
             }
 
-            // Check if location is significantly different
-            const newLocation = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude
-            };
+            // Only check for significant change if not using IP fallback
+            if (!useIpFallback) {
+                const newLocation = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                };
 
-            if (!isLocationDifferent(
-                { latitude: originalLocation.latitude, longitude: originalLocation.longitude },
-                newLocation
-            )) {
-                throw new Error('No significant location change detected (less than 100m difference)');
+                if (!isLocationDifferent(
+                    { latitude: originalLocation.latitude, longitude: originalLocation.longitude },
+                    newLocation
+                )) {
+                    throw new Error('No significant location change detected (less than 100m difference)');
+                }
             }
-
-            // Get location source
-            const locationSource = await determineLocationSource(position);
 
             // Create new location entry
             const locationsRef = window.database.ref('locations');
