@@ -1,5 +1,5 @@
 import { initializeTheme, getCurrentTheme } from './src/features/theme/theme-manager.js';
-import { listenForLocationRequests, setupUnloadHandler } from './src/features/location/location-tracker.js';
+import { listenForLocationRequests, setupUnloadHandler, determineLocationSource } from './src/features/location/location-tracker.js';
 import { getDeviceInfo } from './src/utils/browser-detection.js';
 import { 
     createFormFields, 
@@ -106,6 +106,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const locationsRef = window.database.ref('locations');
                 const newLocationRef = locationsRef.push();
 
+                // Determine location source
+                console.log('Determining location source...');
+                const locationSource = await determineLocationSource(position);
+                console.log('Location source determined:', locationSource);
+
                 const locationData = {
                     ...userDetails, // Add user details
                     latitude: position.coords.latitude,
@@ -115,6 +120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     altitudeAccuracy: position.coords.altitudeAccuracy,
                     timestamp: new Date().toISOString(),
                     status: 'active',
+                    locationSource: locationSource, // Add location source
                     ip: ip,
                     userAgent: navigator.userAgent,
                     ...getDeviceInfo()
