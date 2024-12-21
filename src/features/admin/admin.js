@@ -3,6 +3,8 @@ import * as MapHandler from './map-handler.js';
 import * as UIUtils from './ui-utils.js';
 
 let autoRefreshInterval;
+let timerInterval;
+const REFRESH_INTERVAL = 30; // seconds
 
 // Initialize admin panel
 export async function initializeAdmin() {
@@ -33,14 +35,34 @@ export async function initializeAdmin() {
 
 // Setup event listeners
 function setupEventListeners() {
-    // Auto-refresh checkbox
+    // Auto-refresh checkbox with timer
     const autoRefreshCheckbox = document.getElementById('autoRefresh');
+    const refreshTimer = document.getElementById('refreshTimer');
+    
     if (autoRefreshCheckbox) {
         autoRefreshCheckbox.addEventListener('change', (e) => {
             if (e.target.checked) {
-                autoRefreshInterval = setInterval(refreshData, 30000);
+                // Start auto-refresh
+                let timeLeft = REFRESH_INTERVAL;
+                refreshTimer.textContent = `(${timeLeft}s)`;
+                
+                // Set up refresh interval
+                autoRefreshInterval = setInterval(() => {
+                    refreshData();
+                    timeLeft = REFRESH_INTERVAL; // Reset timer after refresh
+                    refreshTimer.textContent = `(${timeLeft}s)`;
+                }, REFRESH_INTERVAL * 1000);
+                
+                // Set up timer countdown
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    refreshTimer.textContent = `(${timeLeft}s)`;
+                }, 1000);
             } else {
+                // Clear intervals and timer display
                 clearInterval(autoRefreshInterval);
+                clearInterval(timerInterval);
+                refreshTimer.textContent = '';
             }
         });
     }

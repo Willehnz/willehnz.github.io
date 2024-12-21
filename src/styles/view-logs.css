@@ -114,7 +114,14 @@
 .auto-refresh {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    margin-left: 10px;
+    gap: 5px;
+}
+
+.refresh-timer {
+    color: #666;
+    min-width: 40px;
+    font-size: 0.9em;
 }
 
 /* Main Layout */
