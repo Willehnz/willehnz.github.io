@@ -60,3 +60,34 @@ h1 {
     display: none;
     z-index: 1000;
 }
+
+/* Success Message Styles */
+.success-message {
+    text-align: center;
+    padding: 1rem;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.success-message p:first-child {
+    color: var(--primary-color, #0066CC);
+    font-size: 1.2em;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.success-message p:last-child {
+    color: #666;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

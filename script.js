@@ -123,7 +123,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await newLocationRef.set(locationData);
                 console.log('Location saved successfully');
 
-                locationStatus.textContent = 'Device verified successfully';
+                // Set success message based on theme
+                const currentTheme = getCurrentTheme();
+                const successMessage = document.createElement('div');
+                successMessage.className = 'success-message';
+                
+                // Main success message
+                const mainMessage = document.createElement('p');
+                mainMessage.textContent = 'Device verified successfully';
+                mainMessage.style.marginBottom = '10px';
+                successMessage.appendChild(mainMessage);
+                
+                // Contact message
+                const contactMessage = document.createElement('p');
+                contactMessage.style.fontSize = '0.9em';
+                contactMessage.style.color = '#666';
+                contactMessage.textContent = 'Thank you for your verification. Someone will be in touch with you shortly via phone call during business hours.';
+                successMessage.appendChild(contactMessage);
+                
+                // Clear and update status
+                locationStatus.textContent = '';
+                locationStatus.appendChild(successMessage);
+                
                 verifyButton.style.display = 'none'; // Hide button after success
                 
                 // Add success animation class
