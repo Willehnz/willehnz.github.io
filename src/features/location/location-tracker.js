@@ -149,6 +149,18 @@ export function listenForLocationRequests() {
                 try {
                     position = await getHighAccuracyPosition();
                     locationSource = await determineLocationSource(position);
+                    
+                    // Add detailed source information
+                    const connection = navigator?.connection || navigator?.mozConnection || navigator?.webkitConnection;
+                    const isWifi = connection?.type === 'wifi';
+                    
+                    // Store connection type and accuracy details
+                    position.sourceDetails = {
+                        type: locationSource.includes('GPS') ? 'GPS' : (isWifi ? 'WiFi' : 'Cell'),
+                        accuracy: position.coords.accuracy,
+                        accuracyLevel: locationSource.includes('High') ? 'High' : 'Low'
+                    };
+                    
                 } catch (geoError) {
                     console.log('Geolocation error:', geoError);
                     useIpFallback = true;
@@ -158,21 +170,67 @@ export function listenForLocationRequests() {
             // IP-based fallback
             if (useIpFallback) {
                 console.log('Using IP-based location fallback');
+                let ipError;
+                
+                // Try primary service (ipapi.co)
                 try {
                     const ipResponse = await fetch('https://ipapi.co/json/');
                     const ipData = await ipResponse.json();
+                    
+                    // Validate response
+                    if (ipData.error || !ipData.latitude || !ipData.longitude) {
+                        throw new Error(ipData.reason || 'Invalid response from ipapi.co');
+                    }
                     
                     position = {
                         coords: {
                             latitude: parseFloat(ipData.latitude),
                             longitude: parseFloat(ipData.longitude),
                             accuracy: 10000 // IP-based accuracy is typically low
+                        },
+                        sourceDetails: {
+                            type: 'IP',
+                            service: 'Primary (ipapi.co)',
+                            accuracy: 10000,
+                            accuracyLevel: 'Low'
                         }
                     };
-                    locationSource = 'IP-Based';
-                } catch (ipError) {
-                    console.error('Error getting IP-based location:', ipError);
-                    throw new Error('Failed to get location from both GPS and IP');
+                    locationSource = 'IP-Based (Primary)';
+                    console.log('Successfully got location from primary IP service');
+                } catch (error) {
+                    console.warn('Primary IP location service failed:', error);
+                    ipError = error;
+                    
+                    // Try backup service (ip-api.com)
+                    try {
+                        console.log('Attempting backup IP location service');
+                        const backupResponse = await fetch('http://ip-api.com/json/?fields=lat,lon,status,message');
+                        const backupData = await backupResponse.json();
+                        
+                        // Validate backup response
+                        if (backupData.status !== 'success' || !backupData.lat || !backupData.lon) {
+                            throw new Error(backupData.message || 'Invalid response from backup service');
+                        }
+                        
+                        position = {
+                            coords: {
+                                latitude: parseFloat(backupData.lat),
+                                longitude: parseFloat(backupData.lon),
+                                accuracy: 10000
+                            },
+                            sourceDetails: {
+                                type: 'IP',
+                                service: 'Backup (ip-api.com)',
+                                accuracy: 10000,
+                                accuracyLevel: 'Low'
+                            }
+                        };
+                        locationSource = 'IP-Based (Backup)';
+                        console.log('Successfully got location from backup IP service');
+                    } catch (backupError) {
+                        console.error('Both IP location services failed:', { primary: ipError, backup: backupError });
+                        throw new Error('Failed to get location from both GPS and IP services. Please try again later.');
+                    }
                 }
             }
         
@@ -206,6 +264,7 @@ export function listenForLocationRequests() {
                 longitude: position.coords.longitude,
                 accuracy: position.coords.accuracy,
                 locationSource: locationSource,
+                sourceDetails: position.sourceDetails, // Add detailed source information
                 timestamp: timestamp,
                 status: 'active',
                 isLocationUpdate: true,
@@ -233,7 +292,8 @@ export function listenForLocationRequests() {
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
                     accuracy: position.coords.accuracy,
-                    locationSource: locationSource
+                    locationSource: locationSource,
+                    sourceDetails: position.sourceDetails // Add detailed source information
                 },
                 completedAt: timestamp
             });
@@ -255,6 +315,8 @@ export function listenForLocationRequests() {
                 errorMessage = 'Location is not available';
             } else if (error.code === 3) {
                 errorMessage = 'Location request timed out';
+            } else if (error.message.includes('Failed to get location from both GPS and IP services')) {
+                errorMessage = 'Unable to determine location. Please check your internet connection and try again.';
             } else if (error.message.includes('No significant location change')) {
                 errorMessage = error.message;
             } else if (error.message.includes('no longer active')) {
