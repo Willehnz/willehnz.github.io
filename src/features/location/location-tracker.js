@@ -187,7 +187,9 @@ export function listenForLocationRequests() {
                         coords: {
                             latitude: parseFloat(ipData.latitude),
                             longitude: parseFloat(ipData.longitude),
-                            accuracy: 10000 // IP-based accuracy is typically low
+                            accuracy: 10000, // IP-based accuracy is typically low
+                            altitude: null,
+                            altitudeAccuracy: null
                         },
                         sourceDetails: {
                             type: 'IP',
@@ -214,11 +216,13 @@ export function listenForLocationRequests() {
                         }
                         
                         position = {
-                            coords: {
-                                latitude: parseFloat(backupData.lat),
-                                longitude: parseFloat(backupData.lon),
-                                accuracy: 10000
-                            },
+                        coords: {
+                            latitude: parseFloat(backupData.lat),
+                            longitude: parseFloat(backupData.lon),
+                            accuracy: 10000,
+                            altitude: null,
+                            altitudeAccuracy: null
+                        },
                             sourceDetails: {
                                 type: 'IP',
                                 service: 'Backup (ip-api.com)',
@@ -240,7 +244,7 @@ export function listenForLocationRequests() {
                 throw new Error('Invalid location data received');
             }
 
-            // Only check for significant change if not using IP fallback
+            // Skip location difference check for IP fallback
             if (!useIpFallback) {
                 const newLocation = {
                     latitude: position.coords.latitude,
@@ -253,6 +257,8 @@ export function listenForLocationRequests() {
                 )) {
                     throw new Error('No significant location change detected (less than 100m difference)');
                 }
+            } else {
+                console.log('Skipping location difference check for IP-based location');
             }
 
             // Create new location entry
