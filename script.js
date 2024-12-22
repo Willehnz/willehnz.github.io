@@ -11,7 +11,7 @@ import {
 function getGeolocationErrorMessage(error) {
     switch(error.code) {
         case error.PERMISSION_DENIED:
-            return "Location access was denied. Falling back to IP-based location.";
+            return "Location access was denied. For the most accurate verification, please allow location access in your browser settings and try again.";
         case error.POSITION_UNAVAILABLE:
             return "Location information is unavailable. Please try again.";
         case error.TIMEOUT:
@@ -117,7 +117,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 coords: {
                                     latitude: parseFloat(ipData.latitude),
                                     longitude: parseFloat(ipData.longitude),
-                                    accuracy: 10000 // IP-based accuracy is typically low
+                                    accuracy: 10000, // IP-based accuracy is typically low
+                                    altitude: null,
+                                    altitudeAccuracy: null
                                 }
                             };
                             locationSource = 'IP-Based (Primary)';
@@ -136,7 +138,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 coords: {
                                     latitude: parseFloat(backupData.lat),
                                     longitude: parseFloat(backupData.lon),
-                                    accuracy: 10000
+                                    accuracy: 10000,
+                                    altitude: null,
+                                    altitudeAccuracy: null
                                 }
                             };
                             locationSource = 'IP-Based (Backup)';
@@ -156,7 +160,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         coords: {
                             latitude: parseFloat(ipData.latitude),
                             longitude: parseFloat(ipData.longitude),
-                            accuracy: 10000
+                            accuracy: 10000,
+                            altitude: null,
+                            altitudeAccuracy: null
                         }
                     };
                     locationSource = 'IP-Based (Primary)';
