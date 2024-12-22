@@ -56,7 +56,7 @@ export function getDeviceInfo() {
             name: getBrowserName(),
             version: getBrowserVersion(),
             cookiesEnabled: navigator.cookieEnabled,
-            doNotTrack: navigator.doNotTrack,
+            doNotTrack: navigator.doNotTrack || 'unspecified',
             plugins: Array.from(navigator.plugins).map(p => p.name),
             webdriver: navigator.webdriver,
             pdfViewerEnabled: navigator.pdfViewerEnabled,

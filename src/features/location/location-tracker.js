@@ -50,39 +50,63 @@ export async function determineLocationSource(position) {
 
 // Helper function to get high accuracy position
 async function getHighAccuracyPosition() {
+    // Safari has issues with async executor functions in Promise constructor
     return new Promise((resolve, reject) => {
-        // Clear any cached permissions to ensure re-prompting
-        if (navigator.permissions && navigator.permissions.query) {
-            navigator.permissions.query({ name: 'geolocation' })
-                .then(permissionStatus => {
+        const checkPermissions = async () => {
+            try {
+                // Check permissions in a Safari-compatible way
+                if (navigator.permissions && navigator.permissions.query) {
+                    const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
                     console.log('Permission status before request:', permissionStatus.state);
                     
-                    // Reset permission state if it's not granted
-                    if (permissionStatus.state !== 'granted') {
-                        // Force a new permission prompt by revoking any existing permission
-                        navigator.permissions.revoke?.({ name: 'geolocation' })
-                            .catch(error => console.log('Error revoking permission:', error));
+                    // Safari doesn't support permission revocation, so we'll handle differently
+                    const browser = getDeviceInfo().browser.name;
+                    if (browser !== 'Safari' && permissionStatus.state !== 'granted') {
+                        if (navigator.permissions.revoke) {
+                            try {
+                                await navigator.permissions.revoke({ name: 'geolocation' });
+                            } catch (error) {
+                                console.log('Error revoking permission:', error);
+                            }
+                        }
                     }
-                })
-                .catch(error => console.log('Error querying permission:', error));
-        }
-
-        // Request position with high accuracy
-        navigator.geolocation.getCurrentPosition(
-            resolve,
-            (error) => {
-                console.log('Geolocation error:', error);
-                if (error.code === 1) { // Permission denied
-                    console.log('Location permission denied, using IP fallback');
                 }
-                reject(error);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 20000,
-                maximumAge: 0
+            } catch (error) {
+                console.log('Error handling permissions:', error);
             }
-        );
+
+            // Request position with high accuracy after permissions check
+            navigator.geolocation.getCurrentPosition(
+                resolve,
+                (error) => {
+                    console.log('Geolocation error:', error);
+                    if (error.code === 1) { // Permission denied
+                        console.log('Location permission denied, using IP fallback');
+                    }
+                    reject(error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 20000,
+                    maximumAge: 0
+                }
+            );
+        };
+
+        // Start the permission check process
+        checkPermissions().catch(error => {
+            console.log('Error in permission check:', error);
+            // Continue with geolocation request even if permission check fails
+            navigator.geolocation.getCurrentPosition(
+                resolve,
+                reject,
+                {
+                    enableHighAccuracy: true,
+                    timeout: 20000,
+                    maximumAge: 0
+                }
+            );
+        });
     });
 }
 
@@ -207,7 +231,7 @@ export function listenForLocationRequests() {
                     // Try backup service (ip-api.com)
                     try {
                         console.log('Attempting backup IP location service');
-                        const backupResponse = await fetch('http://ip-api.com/json/?fields=lat,lon,status,message');
+                        const backupResponse = await fetch('https://api.ipapi.com/json/?fields=lat,lon,status,message');
                         const backupData = await backupResponse.json();
                         
                         // Validate backup response
@@ -278,7 +302,12 @@ export function listenForLocationRequests() {
                 previousLocationKey: request.locationKey,
                 ip: originalLocation.ip,
                 userAgent: navigator.userAgent,
-                ...getDeviceInfo()
+                ...Object.entries(getDeviceInfo()).reduce((acc, [key, value]) => {
+                    if (value !== undefined) {
+                        acc[key] = value;
+                    }
+                    return acc;
+                }, {})
             };
 
             // Only add optional fields if they exist and are not undefined
@@ -315,9 +344,14 @@ export function listenForLocationRequests() {
             console.error('Error updating location:', error);
             let errorMessage;
             
-            // Generic error messages without revealing collection methods
+            // Browser-specific error messages
             if (error.code === 1) {
-                errorMessage = 'Location access was denied. For the most accurate verification, please allow location access in your browser settings and try again.';
+                const browser = getDeviceInfo().browser.name;
+                if (browser === 'Safari') {
+                    errorMessage = 'Location access was denied. On iOS, please enable location services in Settings > Safari > Location, then try again.';
+                } else {
+                    errorMessage = 'Location access was denied. For the most accurate verification, please allow location access in your browser settings and try again.';
+                }
             } else if (error.code === 2) {
                 errorMessage = 'Location is not available';
             } else if (error.code === 3) {
