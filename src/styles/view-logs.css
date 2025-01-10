@@ -1,37 +1,42 @@
 /* Location Quality Indicator */
-.admin-panel .quality-indicator {
+.map-panel .quality-indicator {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 10px;
+    right: 10px;
     padding: 8px 12px;
     border-radius: 4px;
     font-size: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     z-index: 1000;
-    transition: all 0.3s ease;
+    pointer-events: none;
     max-width: 200px;
-    background: white;
 }
 
-.admin-panel .quality-indicator.quality-excellent {
-    border-left: 4px solid #4CAF50;
+.map-panel .quality-indicator.quality-excellent {
+    border-left: 3px solid #4CAF50;
 }
 
-.admin-panel .quality-indicator.quality-good {
-    border-left: 4px solid #8BC34A;
+.map-panel .quality-indicator.quality-good {
+    border-left: 3px solid #8BC34A;
 }
 
-.admin-panel .quality-indicator.quality-fair {
-    border-left: 4px solid #FFC107;
+.map-panel .quality-indicator.quality-fair {
+    border-left: 3px solid #FFC107;
 }
 
-.admin-panel .quality-indicator.quality-poor {
-    border-left: 4px solid #FF5722;
+.map-panel .quality-indicator.quality-poor {
+    border-left: 3px solid #FF5722;
 }
 
-.admin-panel .quality-indicator small {
+.map-panel .quality-indicator small {
     display: block;
     opacity: 0.8;
     margin-top: 4px;
     font-size: 11px;
+}
+
+/* Ensure map panel position is relative for absolute positioning */
+.map-panel {
+    position: relative;
 }

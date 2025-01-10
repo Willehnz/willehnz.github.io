@@ -1,4 +1,3 @@
-// Core imports
 import { getVersionDisplay } from './src/core/version.js';
 import { getHighAccuracyPosition, determineLocationSource } from './src/features/location/location-tracker.js';
 
@@ -29,7 +28,10 @@ function updateLocationQualityIndicator(sourceDetails) {
             const indicator = document.createElement('div');
             indicator.id = 'locationQualityIndicator';
             indicator.className = 'quality-indicator';
-            document.querySelector('.admin-panel').appendChild(indicator);
+            const mapPanel = document.querySelector('.map-panel');
+            if (mapPanel) {
+                mapPanel.appendChild(indicator);
+            }
             return indicator;
         })();
 
@@ -127,32 +129,27 @@ async function checkPassword() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
             
-            // Import required modules
-            const { initializeAdmin } = await import('./src/features/admin/admin.js');
-            const { refreshMap } = await import('./src/features/admin/map-handler.js');
-            const { initializeTheme } = await import('./src/features/theme/theme-manager.js');
-            
             try {
-                // Initialize theme system first
+                // Import and initialize required modules
+                const [{ initializeAdmin }, { refreshMap }, { initializeTheme }] = await Promise.all([
+                    import('./src/features/admin/admin.js'),
+                    import('./src/features/admin/map-handler.js'),
+                    import('./src/features/theme/theme-manager.js')
+                ]);
+
+                // Initialize systems
                 await initializeTheme();
-                console.log('Theme system initialized');
-                
-                // Initialize admin panel
                 await initializeAdmin();
-                console.log('Admin panel initialized');
-                
-                // Initialize version display
                 initializeVersion();
-                console.log('Version display initialized');
                 
                 // Refresh map after container is visible
                 setTimeout(() => {
                     refreshMap();
-                    console.log('Map refreshed after login');
                 }, 100);
                 
                 // Start listening for location requests
                 listenForLocationRequests();
+                
             } catch (error) {
                 console.error('Error initializing systems:', error);
                 alert('Error initializing admin interface. Please refresh the page.');
