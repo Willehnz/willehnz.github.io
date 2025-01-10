@@ -44,8 +44,13 @@
    - Core scripts in src/core/
    - Feature modules in src/features/
    - Utility functions in src/utils/
-   - Parallel loading enabled
+   - Sequential loading where needed
+   - Parallel loading for independent modules
    - Error boundaries implemented
+   - Critical path optimization:
+     * Theme config loads first
+     * Core modules load second
+     * Feature modules load last
 
 3. Styling:
    - Critical styles inline
