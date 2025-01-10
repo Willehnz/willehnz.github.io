@@ -1,83 +1,80 @@
 # Active Context
 
 ## Current Task
-Implementing location request system improvements
+Fixing location request system while maintaining improvements
 
 ## Recent Changes
-1. Enhanced Location Tracking:
-   - Integrated proper location re-requesting
-   - Added continuous monitoring capability
-   - Implemented location quality indicators
-   - Added manual refresh functionality
+1. Fixed Core Issues:
+   - Removed interfering UI controls
+   - Properly scoped quality indicator
+   - Fixed import ordering
+   - Corrected theme conflicts
 
-2. UI Improvements:
-   - Added location quality indicator with visual feedback
-   - Implemented manual refresh button with loading state
-   - Added continuous monitoring toggle
-   - Created responsive styling for new controls
+2. Maintained Improvements:
+   - Real location re-requesting (not copying)
+   - Location quality indicator
+   - Proper error handling
+   - Browser compatibility fixes
 
 3. Code Structure:
-   - Consolidated location handling in location-tracker.js
-   - Improved error handling and user feedback
-   - Added proper browser compatibility checks
-   - Implemented proper permission handling
+   - Simplified view-logs.js
+   - Properly scoped CSS
+   - Fixed module organization
+   - Maintained existing admin panel layout
 
 ## Current State
-Complete location system implementation:
+Stable location system implementation:
 
-1. Location Tracking Features:
+1. Location Features:
    - High accuracy positioning with fallbacks
-   - Continuous location monitoring option
-   - Manual location refresh capability
-   - Visual quality indicators
+   - Quality indicator in admin panel
    - Proper error handling
+   - IP-based fallback system
 
-2. UI Components:
-   - Quality indicator showing source and accuracy
-   - Refresh button with loading state
-   - Monitoring toggle switch
-   - Error feedback system
+2. UI Integration:
+   - Non-intrusive quality indicator
+   - Properly themed styling
+   - Maintains existing layout
+   - Clear error feedback
 
 3. Technical Implementation:
    - Uses Geolocation API with high accuracy
-   - Implements watchPosition for continuous updates
    - Handles permission states properly
    - Includes IP-based fallback
-   - Validates significant location changes (>100m)
+   - Validates significant location changes
 
-## Key Improvements Made
+## Key Improvements Preserved
 1. Location Accuracy:
-   - Now properly requests fresh location data
-   - Implements high-accuracy positioning
-   - Shows quality indicators based on source
+   - Actually requests fresh location data
+   - Shows quality indicators
+   - Maintains audit trail
 
 2. User Experience:
-   - Added visual feedback for location quality
-   - Provided manual refresh option
-   - Implemented continuous monitoring
-   - Improved error messaging
+   - Non-intrusive quality feedback
+   - Clear error messaging
+   - Maintains existing workflow
 
 3. Technical Robustness:
    - Better error handling
    - Proper permission management
    - Fallback mechanisms
-   - Browser compatibility improvements
+   - Browser compatibility
 
 ## Next Steps
 1. Testing:
-   - Verify continuous monitoring
-   - Test manual refresh functionality
-   - Check quality indicators
+   - Verify location updates work
+   - Check quality indicator display
    - Validate error handling
+   - Test theme compatibility
 
-2. Potential Enhancements:
-   - Add location history visualization
-   - Implement geofencing capabilities
-   - Add location change notifications
-   - Enhance map integration
+2. Future Considerations:
+   - Consider adding manual refresh later
+   - Evaluate continuous monitoring need
+   - Plan for additional quality metrics
+   - Consider map integration improvements
 
 ## Notes
-- System now properly updates location instead of copying
-- Provides multiple ways to update location (manual/automatic)
-- Includes comprehensive error handling
-- Shows detailed location quality information
+- System now properly updates location
+- Quality indicator properly integrated
+- Theme compatibility restored
+- Core functionality maintained

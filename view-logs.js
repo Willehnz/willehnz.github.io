@@ -1,4 +1,6 @@
+// Core imports
 import { getVersionDisplay } from './src/core/version.js';
+import { getHighAccuracyPosition, determineLocationSource } from './src/features/location/location-tracker.js';
 
 // Password hash (default password is "admin123")
 const PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';  
@@ -20,108 +22,6 @@ function initializeVersion() {
     }
 }
 
-// Import location tracking functionality
-import { 
-    getHighAccuracyPosition, 
-    determineLocationSource,
-    startLocationMonitoring,
-    stopLocationMonitoring
-} from './src/features/location/location-tracker.js';
-
-// Add manual refresh and monitoring controls
-function addLocationControls() {
-    const controlsContainer = document.createElement('div');
-    controlsContainer.className = 'location-controls';
-    
-    // Add monitor toggle
-    const monitorToggle = document.createElement('div');
-    monitorToggle.className = 'monitor-toggle';
-    monitorToggle.innerHTML = `
-        <input type="checkbox" id="monitorToggle">
-        <label for="monitorToggle">Continuous Monitoring</label>
-    `;
-    
-    // Add refresh button
-    const refreshButton = document.createElement('button');
-    refreshButton.className = 'refresh-button';
-    refreshButton.innerHTML = `
-        <span class="icon"></span>
-        <span class="text">Update Location</span>
-    `;
-    
-    controlsContainer.appendChild(monitorToggle);
-    controlsContainer.appendChild(refreshButton);
-    document.querySelector('#mainContent').appendChild(controlsContainer);
-    
-    // Setup event handlers
-    const toggle = monitorToggle.querySelector('input');
-    toggle.addEventListener('change', async (e) => {
-        if (e.target.checked) {
-            try {
-                await startLocationMonitoring(handleLocationUpdate);
-            } catch (error) {
-                console.error('Failed to start monitoring:', error);
-                e.target.checked = false;
-                alert(error.message);
-            }
-        } else {
-            stopLocationMonitoring();
-        }
-    });
-    
-    refreshButton.addEventListener('click', async () => {
-        if (refreshButton.classList.contains('updating')) return;
-        
-        refreshButton.classList.add('updating');
-        try {
-            const position = await getHighAccuracyPosition();
-            await handleLocationUpdate(position);
-            refreshButton.classList.remove('updating');
-        } catch (error) {
-            console.error('Failed to update location:', error);
-            refreshButton.classList.remove('updating');
-            alert(error.message);
-        }
-    });
-}
-
-// Handle location updates
-async function handleLocationUpdate(position, error = null) {
-    if (error) {
-        console.error('Location error:', error);
-        return;
-    }
-    
-    if (!position) return;
-    
-    try {
-        const locationSource = await determineLocationSource(position);
-        updateLocationQualityIndicator(position.sourceDetails);
-        
-        // Create new location entry
-        const newLocationRef = window.database.ref('locations').push();
-        const timestamp = new Date().toISOString();
-        
-        const locationData = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            altitude: position.coords.altitude,
-            altitudeAccuracy: position.coords.altitudeAccuracy,
-            locationSource: locationSource,
-            sourceDetails: position.sourceDetails,
-            timestamp: timestamp,
-            status: 'active'
-        };
-        
-        await newLocationRef.set(locationData);
-        console.log('Location updated successfully');
-        
-    } catch (error) {
-        console.error('Error saving location update:', error);
-    }
-}
-
 // Add location quality indicator to UI
 function updateLocationQualityIndicator(sourceDetails) {
     const qualityIndicator = document.getElementById('locationQualityIndicator') || 
@@ -129,7 +29,7 @@ function updateLocationQualityIndicator(sourceDetails) {
             const indicator = document.createElement('div');
             indicator.id = 'locationQualityIndicator';
             indicator.className = 'quality-indicator';
-            document.querySelector('#mainContent').appendChild(indicator);
+            document.querySelector('.admin-panel').appendChild(indicator);
             return indicator;
         })();
 
@@ -244,10 +144,6 @@ async function checkPassword() {
                 // Initialize version display
                 initializeVersion();
                 console.log('Version display initialized');
-                
-                // Add location controls
-                addLocationControls();
-                console.log('Location controls added');
                 
                 // Refresh map after container is visible
                 setTimeout(() => {
