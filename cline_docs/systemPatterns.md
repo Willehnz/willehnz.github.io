@@ -16,32 +16,120 @@
    - Theme management in features/theme
 
 2. Style Organization
+   - Critical CSS inlined in HTML
    - Core styles in src/styles/core.css
    - Feature-specific styles in respective CSS files
    - Theme-specific styles in themes directory
    - Utility classes in utilities.css
 
-3. Firebase Integration
-   - Firebase initialization handled in core
-   - Database rules defined in database.rules.json
+3. Performance Optimization
+   - Parallel module loading
+   - Resource preloading
+   - Critical path optimization
+   - Connection timeouts
+   - Graceful degradation
 
-4. Version Management
+4. Firebase Integration
+   - Optimized initialization with timeouts
+   - Disabled persistence for speed
+   - Reduced listener count
+   - Write permission verification
+   - Connection state management
+
+5. Resource Management
+   - Critical resources preloaded
+   - Async script loading
+   - Deferred non-critical resources
+   - Optimized loading order
+   - Enhanced caching strategy
+
+6. Version Management
    - Version tracking in src/core/version.js
    - Update script in scripts/update-version.js
+   - Version display optimization
 
 ## Design Patterns
-- Manager Pattern for various features (ThemeManager, ContentManager)
-- Handler Pattern for specific functionalities (FormHandler, MapHandler)
-- Utility Pattern for browser detection and common functions
+1. Module Pattern
+   - Feature-based organization
+   - Clear module boundaries
+   - Explicit dependencies
+   - Parallel loading capability
+   - Error isolation
+
+2. Manager Pattern
+   - ThemeManager for theme handling
+   - ContentManager for content
+   - Optimized initialization
+   - Resource management
+   - Error recovery
+
+3. Handler Pattern
+   - FormHandler for forms
+   - MapHandler for maps
+   - Efficient event handling
+   - Resource cleanup
+   - Error boundaries
+
+4. Utility Pattern
+   - Browser detection
+   - Common functions
+   - Performance utilities
+   - Error handling
+   - Resource management
 
 ## File Organization
-- Assets stored in /assets
-- Scripts for maintenance in /scripts
-- Source code modularized in /src
-- Themes separated in /themes
+1. Core Structure
+   - Assets in /assets
+   - Scripts in /scripts
+   - Source in /src
+   - Themes in /themes
 
-## Code Structure
-- Feature-based organization
-- Clear separation between core functionality and features
-- Utility functions isolated for reusability
-- Theme configuration separate from core styles
+2. Source Organization
+   - Core initialization
+   - Feature modules
+   - Utility functions
+   - Style management
+   - Resource handling
+
+3. Style Management
+   - Critical styles inline
+   - Core styles separate
+   - Feature styles modular
+   - Theme styles isolated
+   - Utility classes organized
+
+4. Resource Structure
+   - Critical resources prioritized
+   - Non-critical deferred
+   - Async loading enabled
+   - Caching optimized
+   - Error handling improved
+
+## Performance Patterns
+1. Loading Strategy
+   - Critical path optimization
+   - Resource prioritization
+   - Parallel loading
+   - Async execution
+   - Error recovery
+
+2. Caching Strategy
+   - Resource preloading
+   - Browser caching
+   - Memory management
+   - Connection optimization
+   - State persistence
+
+3. Error Handling
+   - Graceful degradation
+   - Timeout management
+   - Connection recovery
+   - User feedback
+   - State preservation
+
+4. Resource Management
+   - Memory optimization
+   - Connection pooling
+   - Listener management
+   - Cache control
+   - Load balancing
