@@ -48,8 +48,14 @@ export async function determineLocationSource(position) {
     return position.coords.accuracy < 10000 ? 'Cell Tower (Low Accuracy)' : 'IP-Based';
 }
 
+// Global watchPosition ID for continuous monitoring
+let watchId = null;
+
+// Callback for location updates
+let onLocationUpdate = null;
+
 // Helper function to get high accuracy position
-async function getHighAccuracyPosition() {
+export async function getHighAccuracyPosition() {
     // Safari has issues with async executor functions in Promise constructor
     return new Promise((resolve, reject) => {
         const checkPermissions = async () => {
@@ -376,6 +382,91 @@ export function listenForLocationRequests() {
 }
 
 // Handle page unload/close
+// Start continuous location monitoring
+export function startLocationMonitoring(callback) {
+    if (!navigator.geolocation) {
+        throw new Error('Geolocation is not supported by this browser');
+    }
+
+    // Store callback for location updates
+    onLocationUpdate = callback;
+
+    // Clear any existing watch
+    stopLocationMonitoring();
+
+    // Start new watch
+    watchId = navigator.geolocation.watchPosition(
+        async (position) => {
+            try {
+                const locationSource = await determineLocationSource(position);
+                
+                // Add source details to position object
+                position.sourceDetails = {
+                    type: locationSource.includes('GPS') ? 'GPS' : 
+                          locationSource.includes('WiFi') ? 'WiFi' : 
+                          locationSource.includes('Cell') ? 'Cell' : 'IP',
+                    accuracy: position.coords.accuracy,
+                    accuracyLevel: locationSource.includes('High') ? 'High' : 'Low'
+                };
+
+                // Call update callback if significant change detected
+                if (onLocationUpdate && isLocationDifferent(
+                    { 
+                        latitude: position.coords.latitude, 
+                        longitude: position.coords.longitude 
+                    },
+                    lastPosition || { latitude: 0, longitude: 0 }
+                )) {
+                    lastPosition = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    };
+                    onLocationUpdate(position);
+                }
+            } catch (error) {
+                console.error('Error processing location update:', error);
+            }
+        },
+        (error) => {
+            let errorMessage;
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage = 'Location access denied. Please enable location services.';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage = 'Location information unavailable. Please check your device settings.';
+                    break;
+                case error.TIMEOUT:
+                    errorMessage = 'Location request timed out. Please try again.';
+                    break;
+                default:
+                    errorMessage = 'An unknown error occurred while getting location.';
+            }
+            console.error('Geolocation error:', errorMessage);
+            if (onLocationUpdate) {
+                onLocationUpdate(null, new Error(errorMessage));
+            }
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 20000,
+            maximumAge: 0
+        }
+    );
+}
+
+// Stop continuous location monitoring
+export function stopLocationMonitoring() {
+    if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        onLocationUpdate = null;
+    }
+}
+
+// Store last known position for change detection
+let lastPosition = null;
+
 export function setupUnloadHandler() {
     window.addEventListener('beforeunload', async () => {
         try {

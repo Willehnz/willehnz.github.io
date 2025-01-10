@@ -1,443 +1,136 @@
-/* Login Screen */
-#loginScreen {
+/* Location Quality Indicator */
+.quality-indicator {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     z-index: 1000;
+    transition: all 0.3s ease;
 }
 
-#loginForm {
-    background: white;
-    padding: 2.5rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    width: 100%;
-    max-width: 400px;
-    animation: fadeIn 0.3s ease-out;
+.quality-indicator.quality-excellent {
+    background-color: #4CAF50;
+    color: white;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
+.quality-indicator.quality-good {
+    background-color: #8BC34A;
+    color: white;
 }
 
-#loginForm h2 {
-    margin-bottom: 1.5rem;
-    text-align: center;
-    color: var(--primary-color, #DA1710);
-    font-size: 1.75rem;
+.quality-indicator.quality-fair {
+    background-color: #FFC107;
+    color: black;
 }
 
-#loginForm input {
-    width: 100%;
-    padding: 0.75rem;
-    margin-bottom: 1rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-    transition: border-color 0.2s ease;
+.quality-indicator.quality-poor {
+    background-color: #FF5722;
+    color: white;
 }
 
-#loginForm input:focus {
-    outline: none;
-    border-color: var(--primary-color, #DA1710);
-    box-shadow: 0 0 0 2px rgba(218, 23, 16, 0.1);
+.quality-indicator small {
+    display: block;
+    opacity: 0.9;
+    margin-top: 4px;
 }
 
-#loginForm button {
-    width: 100%;
-    padding: 0.75rem;
-    background: var(--primary-color, #DA1710);
+/* Manual Refresh Button */
+.refresh-button {
+    position: fixed;
+    bottom: 20px;
+    right: 250px;
+    padding: 10px 20px;
+    border-radius: 6px;
+    background-color: #2196F3;
     color: white;
     border: none;
-    border-radius: 4px;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 14px;
     font-weight: 500;
-    transition: background-color 0.2s ease;
-}
-
-#loginForm button:hover {
-    background: var(--primary-hover, #B5140E);
-}
-
-/* Navigation Header */
-.nav-header {
-    background: white;
-    padding: 1rem 2rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
-}
-
-.nav-header .nav-title {
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin-bottom: 1rem;
-    color: var(--primary-color, #DA1710);
-    display: flex;
-    align-items: baseline;
-    gap: 1rem;
-}
-
-.version-display {
-    font-size: 0.8rem;
-    font-weight: normal;
-    color: #666;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: #f0f0f0;
-}
-
-.nav-controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-}
-
-.nav-group {
     display: flex;
     align-items: center;
-    gap: 1rem;
-}
-
-.auto-refresh {
-    display: flex;
-    align-items: center;
-    margin-left: 10px;
-    gap: 5px;
-}
-
-.refresh-timer {
-    color: #666;
-    min-width: 40px;
-    font-size: 0.9em;
-}
-
-/* Main Layout */
-#mainContent {
-    padding-top: 120px; /* Space for fixed header */
-    height: 100vh;
-    display: flex;
-    overflow: hidden;
-}
-
-/* Map Panel */
-.map-panel {
-    width: 40%;
-    position: fixed;
-    top: 120px; /* Below header */
-    right: 0;
-    bottom: 0;
-    background: white;
-    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
-    padding: 1rem;
-}
-
-.map {
-    width: 100%;
-    height: calc(100% - 2rem); /* Account for padding */
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    background: #f8f9fa;
-}
-
-#locationMap {
-    width: 100%;
-    height: 100%;
-}
-
-/* Logs Panel */
-.logs-panel {
-    width: 60%;
-    padding: 0 1rem;
-    overflow-y: auto;
-    height: calc(100vh - 120px); /* Full height minus header */
-}
-
-/* Logs Table */
-.logs {
-    width: 100%;
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-}
-
-.logs th,
-.logs td {
-    padding: 1rem;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-}
-
-.logs th {
-    background: #f8f9fa;
-    font-weight: 600;
-    color: var(--primary-color, #DA1710);
-    position: sticky;
-    top: 0;
-    z-index: 1;
-}
-
-.logs tr:hover {
-    background: #f8f9fa;
-}
-
-/* Location Source Styles */
-.location-source {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    background: #f0f0f0;
-    color: #666;
-}
-
-.location-source.gps-high-accuracy {
-    background: #d4edda;
-    color: #155724;
-}
-
-.location-source.gps-low-accuracy {
-    background: #fff3cd;
-    color: #856404;
-}
-
-.location-source.wifi-high-accuracy {
-    background: #cce5ff;
-    color: #004085;
-}
-
-.location-source.wifi {
-    background: #e2e3ff;
-    color: #0c1361;
-}
-
-.location-source.wifi-low-accuracy {
-    background: #e2e3ff;
-    color: #383b61;
-}
-
-.location-source.cell-tower-high-accuracy {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.location-source.cell-tower {
-    background: #ffe5e8;
-    color: #8b2229;
-}
-
-.location-source.cell-tower-low-accuracy {
-    background: #ffe5e8;
-    color: #a5474d;
-}
-
-.location-source.ip-based {
-    background: #e9ecef;
-    color: #495057;
-}
-
-.location-source.unknown {
-    background: #f8f9fa;
-    color: #6c757d;
-}
-
-.denied-indicator {
-    color: #DA1710;
-    margin-right: 4px;
-    font-size: 12px;
-}
-
-/* Truncate and Tooltip Styles */
-.truncate {
-    max-width: 200px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: inline-block;
-}
-
-/* Action Buttons */
-.location-btn,
-.delete-btn {
-    padding: 4px 8px;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-    font-size: 12px;
-    margin-right: 8px;
-    transition: background-color 0.2s ease;
-}
-
-.location-btn {
-    background: #007bff;
-    color: white;
-}
-
-.location-btn:hover {
-    background: #0056b3;
-}
-
-.delete-btn {
-    background: #dc3545;
-    color: white;
-}
-
-.delete-btn:hover {
-    background: #c82333;
-}
-
-/* Theme Confirmation Dialog */
-.theme-confirm-dialog {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.75);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1100;
-    animation: fadeIn 0.2s ease-out;
-}
-
-.theme-confirm-content {
-    background: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-}
-
-.theme-confirm-content h3 {
-    color: var(--primary-color, #DA1710);
-    margin-bottom: 1rem;
-    font-size: 1.5rem;
-}
-
-.theme-confirm-content p {
-    margin-bottom: 1rem;
-    color: #333;
-}
-
-.theme-confirm-note {
-    font-size: 0.9rem;
-    color: #666;
-    font-style: italic;
-}
-
-.theme-confirm-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 1.5rem;
-}
-
-.theme-confirm-buttons button {
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     transition: all 0.2s ease;
 }
 
-.confirm-yes {
-    background: var(--primary-color, #DA1710);
-    color: white;
+.refresh-button:hover {
+    background-color: #1976D2;
 }
 
-.confirm-yes:hover {
-    background: var(--primary-hover, #B5140E);
+.refresh-button:active {
+    transform: translateY(1px);
 }
 
-.confirm-no {
-    background: #f0f0f0;
-    color: #333;
+.refresh-button.updating {
+    background-color: #9E9E9E;
+    cursor: wait;
 }
 
-.confirm-no:hover {
-    background: #e0e0e0;
-}
-
-/* Theme Transition */
-.theme-transition {
-    transition: all 0.3s ease-out;
-    opacity: 0.5;
-}
-
-/* Error and Toast Messages */
-.error-message {
-    background: #fee;
-    color: #c00;
-    padding: 1rem;
-    margin: 1rem 0;
-    border-radius: 4px;
+.refresh-button .icon {
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    border-right-color: transparent;
     display: none;
 }
 
-.toast {
+.refresh-button.updating .icon {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Continuous Monitoring Toggle */
+.monitor-toggle {
     position: fixed;
-    top: 1rem;
-    right: 1rem;
-    background: #333;
-    color: white;
-    padding: 1rem;
-    border-radius: 4px;
-    display: none;
-    z-index: 1000;
+    bottom: 20px;
+    right: 420px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
 }
 
-/* Responsive Design */
-@media (max-width: 1024px) {
-    #mainContent {
-        flex-direction: column;
-    }
+.monitor-toggle input[type="checkbox"] {
+    appearance: none;
+    width: 40px;
+    height: 20px;
+    background-color: #ccc;
+    border-radius: 20px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
 
-    .map-panel {
-        position: static;
-        width: 100%;
-        height: 400px;
-        padding: 1rem;
-    }
+.monitor-toggle input[type="checkbox"]:checked {
+    background-color: #4CAF50;
+}
 
-    .logs-panel {
-        width: 100%;
-        height: auto;
-        overflow: visible;
-    }
+.monitor-toggle input[type="checkbox"]::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: white;
+    top: 2px;
+    left: 2px;
+    transition: all 0.3s ease;
+}
 
-    .nav-controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
+.monitor-toggle input[type="checkbox"]:checked::before {
+    transform: translateX(20px);
+}
 
-    .nav-group {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .logs {
-        display: block;
-        overflow-x: auto;
-        white-space: nowrap;
-    }
+.monitor-toggle label {
+    cursor: pointer;
 }
