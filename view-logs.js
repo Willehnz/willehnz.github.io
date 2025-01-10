@@ -16,10 +16,11 @@ const modulePromises = {
 const firebaseReady = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
         reject(new Error('Firebase initialization timeout'));
-    }, 10000);
+    }, 15000); // Increased timeout for slower connections
 
     const checkFirebase = () => {
-        if (window.database) {
+        // Check both Firebase SDK and database initialization
+        if (window.firebaseLoaded && window.database) {
             clearTimeout(timeout);
             resolve();
         } else {
@@ -156,10 +157,8 @@ async function checkPassword() {
             
             try {
                 // Wait for Firebase and modules
-                await Promise.all([
-                    firebaseReady,
-                    ...Object.values(modulePromises)
-                ]);
+                await firebaseReady;
+                console.log('Firebase ready');
 
                 // Get pre-loaded modules
                 const [{ initializeAdmin }, { refreshMap }, { initializeTheme }] = await Promise.all([
@@ -167,6 +166,7 @@ async function checkPassword() {
                     modulePromises.map,
                     modulePromises.theme
                 ]);
+                console.log('Modules loaded');
 
                 // Initialize theme first
                 await initializeTheme();

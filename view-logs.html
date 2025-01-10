@@ -5,12 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Location Logs - Admin View</title>
     
-    <!-- Preload critical resources -->
-    <link rel="preload" href="style.css" as="style">
-    <link rel="preload" href="src/styles/view-logs.css" as="style">
-    <link rel="preload" href="src/core/firebase-init.js" as="script">
-    <link rel="preload" href="view-logs.js" as="script">
-    
     <!-- Critical CSS -->
     <style>
         /* Inline critical styles for faster initial render */
@@ -105,33 +99,55 @@
         </div>
     </div>
 
-    <!-- Firebase SDK (load async) -->
-    <script async src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script async src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
     
-    <!-- Leaflet JS (load async) -->
-    <script async src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    <!-- Initialize Firebase -->
+    <script>
+        // Wait for Firebase SDK to load
+        window.firebaseLoaded = new Promise((resolve) => {
+            if (typeof firebase !== 'undefined') {
+                resolve();
+            } else {
+                window.addEventListener('load', () => {
+                    if (typeof firebase !== 'undefined') {
+                        resolve();
+                    } else {
+                        const checkFirebase = setInterval(() => {
+                            if (typeof firebase !== 'undefined') {
+                                clearInterval(checkFirebase);
+                                resolve();
+                            }
+                        }, 100);
+                    }
+                });
+            }
+        });
+    </script>
+    <script src="src/core/firebase-init.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
 
-    <!-- Initialize Firebase -->
-    <script src="src/core/firebase-init.js"></script>
-    
     <!-- Load login functionality -->
     <script type="module" src="view-logs.js"></script>
 
     <!-- Load themes configuration -->
     <script type="module">
-        // Load themes configuration
-        import('./themes/config.js').catch(error => {
-            console.error('Failed to load themes configuration:', error);
-        });
-        
-        // Make refreshData available globally for the refresh button
-        import('./src/features/admin/admin.js').then(module => {
-            window.admin = { refreshData: module.refreshData };
-        }).catch(error => {
-            console.error('Failed to load admin module:', error);
+        // Wait for Firebase and load themes
+        window.firebaseLoaded.then(() => {
+            import('./themes/config.js').catch(error => {
+                console.error('Failed to load themes configuration:', error);
+            });
+            
+            import('./src/features/admin/admin.js').then(module => {
+                window.admin = { refreshData: module.refreshData };
+            }).catch(error => {
+                console.error('Failed to load admin module:', error);
+            });
         });
     </script>
 </body>
