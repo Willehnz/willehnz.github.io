@@ -2,7 +2,7 @@
 window.firebaseConfig = {
     apiKey: "AIzaSyBPyEBGDaOFeWNI_PvXsfH9-0AoYGnqAGc",
     authDomain: "pheesh-nz.firebaseapp.com",
-    databaseURL: "https://pheesh-nz-default-rtdb.asia-southeast1.firebasedatabase.app",
+    databaseURL: "https://pheesh-nz-default-rtdb.asia-southeast1.firebasedatabase.app/",
     projectId: "pheesh-nz",
     storageBucket: "pheesh-nz.appspot.com",
     messagingSenderId: "654472288162",

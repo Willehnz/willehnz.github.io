@@ -5,10 +5,10 @@ window.firebaseLoaded = window.firebaseLoaded.then(async () => {
     }
 
     // Initialize Firebase with persistence disabled for faster startup
-    const app = firebase.initializeApp(firebaseConfig, {
-        databaseAuthVariableOverride: null,
-        persistence: false
-    });
+    const app = firebase.initializeApp(firebaseConfig);
+    
+    // Configure database settings
+    firebase.database().setPersistenceEnabled(false);
 
     // Initialize database with retry logic
     const database = firebase.database();
