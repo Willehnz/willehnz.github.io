@@ -48,9 +48,15 @@
    - Parallel loading for independent modules
    - Error boundaries implemented
    - Critical path optimization:
-     * Theme config loads first
-     * Core modules load second
+     * Firebase SDK loads first
+     * Theme config imports as module
+     * Core modules load next
      * Feature modules load last
+   - Module System:
+     * ES modules for feature code
+     * Regular scripts for SDK loading
+     * Proper import/export usage
+     * Module initialization order
 
 3. Styling:
    - Critical styles inline

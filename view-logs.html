@@ -132,15 +132,16 @@
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
 
-    <!-- Load themes configuration first -->
-    <script src="themes/config.js"></script>
-
-    <!-- Load login functionality after themes -->
+    <!-- Load application -->
     <script type="module">
         // Wait for Firebase and initialize
         window.firebaseLoaded.then(async () => {
             try {
-                // First load admin module
+                // First load and initialize themes
+                const { default: themes } = await import('./themes/config.js');
+                window.themes = themes;
+                
+                // Then load admin module
                 const adminModule = await import('./src/features/admin/admin.js');
                 window.admin = { refreshData: adminModule.refreshData };
                 
@@ -171,6 +172,7 @@
                 }
             } catch (error) {
                 console.error('Failed to initialize application:', error);
+                console.error('Error details:', error);
             }
         });
     </script>

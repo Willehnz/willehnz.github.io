@@ -1,4 +1,4 @@
-window.themes = {
+export default {
     westpac: {
         name: "Westpac",
         logo: "./assets/westpac-logo.png",
