@@ -1,84 +1,36 @@
-# Active Context
-
 ## Current Task
-Fixed Firebase initialization and theme switching functionality
+Fixing theme system and Firebase initialization
 
 ## Recent Changes
 1. Firebase Loading:
    - Removed invalid setMaxListeners call
-   - Improved initialization sequence
-   - Added proper error handling
-   - Enhanced error logging
+   - Simplified initialization sequence
+   - Added basic error handling
    - Fixed promise chain returns
 
 2. Theme System:
-   - Converted to ES module architecture
-   - Added theme select change handler
-   - Implemented Firebase theme updates
-   - Added error handling and feedback
-   - Connected UI to theme system
-   - Improved state management
-   - Fixed initialization sequence
-
+   - Reverted to simpler architecture
+   - Restored window.themes global
+   - Fixed script loading order
+   - Simplified initialization
 ## Current State
 1. Firebase Initialization:
-   - Proper SDK loading check
-   - Database initialization verification
-   - Error propagation implemented
-   - Loading state tracking
+   - Basic SDK loading check
+   - Database initialization
+   - Simple error handling
    - Connection monitoring
 
 2. Theme System:
-   - ES module system working
-   - Theme selection functional
-   - Firebase integration complete
-   - Error handling in place
-   - UI feedback implemented
-   - State management improved
-   - Module loading optimized
-
-## Key Improvements
-1. Reliability:
-   - Fixed Firebase initialization
-   - Improved theme switching
-   - Better error handling
-   - Enhanced user feedback
-   - State preservation
-
-2. Performance:
-   - Optimized loading sequence
-   - Reduced initialization time
-   - Better resource management
-   - Improved error recovery
-   - State consistency
-
-3. User Experience:
-   - Theme switching feedback
-   - Clear error messages
-   - State preservation
-   - Visual feedback
-   - Recovery options
-
-## Next Steps
-1. Testing:
-   - Verify theme switching
-   - Test error scenarios
-   - Check state preservation
-   - Monitor performance
-   - Validate user feedback
-
-2. Monitoring:
-   - Track theme changes
-   - Monitor errors
-   - Check performance
-   - Analyze user impact
-   - Verify stability
-
+   - Global theme configuration
+   - Basic theme selection
+   - Firebase integration
+   - Simple error handling
+   - Basic state management
 ## Notes
-- Firebase initialization fixed
-- Theme system converted to ES modules
-- Theme switching implemented
-- Error handling improved
-- User feedback added
-- State management enhanced
-- Module loading sequence optimized
+- Simplified Firebase initialization
+- Reverted theme system changes
+- Fixed script loading order
+- Basic functionality restored
+- Known issues remain:
+  * h1-check.js error
+  * Firebase connection stability

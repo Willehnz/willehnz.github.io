@@ -50,13 +50,12 @@
 
 ## Design Patterns
 1. Module Pattern
-   - ES module architecture
+   - Mixed module architecture
    - Feature-based organization
    - Clear module boundaries
-   - Explicit dependencies
-   - Parallel loading capability
-   - Error isolation
-   - Proper import/export usage
+   - Simple dependencies
+   - Basic error isolation
+   - Global state for critical systems
 
 2. Manager Pattern
    - ThemeManager for theme handling
@@ -137,18 +136,15 @@
    - Load balancing
 
 5. Theme Management
-   - ES module-based theme system
+   - Global theme configuration
    - Firebase-based theme state
    - UI-driven theme updates
    - Real-time theme sync
-   - Error recovery
-   - State preservation
-   - Sequential loading:
+   - Basic error handling
+   - Simple loading sequence:
      * Firebase SDK loads first
-     * Theme config imports as module
-     * Admin module loads next
-     * Main functionality loads last
-     * Theme handler initialized after all loads
+     * Theme config loads as script
+     * Feature modules load last
 
 6. Event Handling
    - Theme change events

@@ -1,16 +1,5 @@
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyBqx_C7XqKjmgJqRHcXBW5K9zMGNBZyGDY",
-    authDomain: "pheesh-4481e.firebaseapp.com",
-    databaseURL: "https://pheesh-4481e-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "pheesh-4481e",
-    storageBucket: "pheesh-4481e.appspot.com",
-    messagingSenderId: "458791455321",
-    appId: "1:458791455321:web:3a9b8e6f4b8e9f1b2c3d4e"
-};
-
 // Initialize Firebase after SDK loads
-window.firebaseLoaded = window.firebaseLoaded.then(() => {
+window.firebaseLoaded = window.firebaseLoaded.then(async () => {
     if (!firebase) {
         throw new Error('Firebase SDK not loaded');
     }
@@ -21,53 +10,84 @@ window.firebaseLoaded = window.firebaseLoaded.then(() => {
         persistence: false
     });
 
-    // Initialize database
+    // Initialize database with retry logic
     const database = firebase.database();
+    let retryCount = 0;
+    const maxRetries = 3;
     
-    // Make database available globally only after initialization
+    // Make database available globally
     window.database = database;
-    
-    // Test database connection with timeout
+
+    // Enhanced connection monitoring
     const connectedRef = database.ref('.info/connected');
     let connectionTimeout;
+    let isConnected = false;
 
-    connectedRef.on('value', (snapshot) => {
+    // Connection state handler
+    const handleConnectionState = (snapshot) => {
         clearTimeout(connectionTimeout);
-        const isConnected = snapshot.val();
+        isConnected = snapshot.val() === true;
         console.log('Database connection state:', isConnected);
         
         if (!isConnected && document.visibilityState !== 'hidden') {
-            console.warn('Attempting to reconnect to Firebase...');
+            console.warn('Connection lost - attempting to reconnect...');
+            if (retryCount < maxRetries) {
+                retryCount++;
+                console.log(`Retry attempt ${retryCount} of ${maxRetries}`);
+                database.goOnline(); // Force reconnection attempt
+            } else {
+                console.error('Max retries reached - please refresh the page');
+            }
+        } else if (isConnected) {
+            retryCount = 0; // Reset retry count on successful connection
+            console.log('Connection restored');
         }
-    });
+    };
 
-    // Set connection timeout
+    // Set up connection monitoring
+    connectedRef.on('value', handleConnectionState);
+    
+    // Initial connection timeout
     connectionTimeout = setTimeout(() => {
-        console.warn('Database connection timeout - proceeding with degraded functionality');
-    }, 5000);
+        if (!isConnected) {
+            console.warn('Initial connection timeout - attempting to proceed...');
+            database.goOnline(); // Force connection attempt
+        }
+    }, 10000); // Longer initial timeout
 
-    // Test write permission with timeout
-    const testRef = database.ref('test-write');
-    const writeTimeout = setTimeout(() => {
-        console.warn('Write permission test timeout - proceeding with read-only mode');
-    }, 3000);
+    // Test write permission with retry
+    const testWrite = async () => {
+        const testRef = database.ref('test-write');
+        const writeTimeout = setTimeout(() => {
+            console.warn('Write permission test timeout - proceeding in read-only mode');
+        }, 5000);
 
-    return testRef.set({
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-    }).then(() => {
-        clearTimeout(writeTimeout);
-        console.log('Write permission verified');
-        return testRef.remove();
-    }).then(() => {
-        console.log('Firebase initialization complete');
-        return database; // Return database for promise chain
-    }).catch(error => {
-        clearTimeout(writeTimeout);
+        try {
+            await testRef.set({
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+            clearTimeout(writeTimeout);
+            console.log('Write permission verified');
+            await testRef.remove();
+            console.log('Firebase initialization complete');
+            return database;
+        } catch (error) {
+            clearTimeout(writeTimeout);
+            if (retryCount < maxRetries) {
+                retryCount++;
+                console.log(`Retrying write test (${retryCount}/${maxRetries})`);
+                return testWrite(); // Retry recursively
+            }
+            throw error;
+        }
+    };
+
+    return testWrite().catch(error => {
         console.error('Firebase initialization error:', error);
-        throw error; // Re-throw to propagate error
+        throw error;
     });
 }).catch(error => {
     console.error('Failed to load Firebase:', error.message);
     console.error('Error details:', error);
-    throw error; // Re-throw to propagate error to application
+    throw error;
 });

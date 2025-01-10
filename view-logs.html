@@ -32,6 +32,37 @@
     <link id="themeStyles" rel="stylesheet" href="">
 </head>
 <body>
+    <!-- Error handling -->
+    <script>
+        // Global error handler
+        window.onerror = function(msg, url, line, col, error) {
+            // Ignore h1-check.js errors
+            if (msg.includes('h1-check.js') || msg.includes('detectStore')) {
+                return true; // Prevent error from bubbling up
+            }
+            // Log other errors
+            console.error('Uncaught error:', {
+                message: msg,
+                url: url,
+                line: line,
+                column: col,
+                error: error
+            });
+            return false; // Let other errors propagate
+        };
+
+        // Prevent undefined property access
+        window.a = window.a || {};
+        if (window.a) {
+            window.a.default = window.a.default || {};
+            if (window.a.default) {
+                window.a.default.detectStore = window.a.default.detectStore || function() {
+                    return undefined; // Safe fallback
+                };
+            }
+        }
+    </script>
+
     <div id="loginScreen">
         <form id="loginForm" class="text-center">
             <h2 class="mb-3">Location Logs Admin</h2>
@@ -132,48 +163,20 @@
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
 
-    <!-- Load application -->
+    <!-- Load themes configuration -->
+    <script src="themes/config.js"></script>
+
+    <!-- Load login functionality -->
+    <script type="module" src="view-logs.js"></script>
+
+    <!-- Initialize admin module -->
     <script type="module">
-        // Wait for Firebase and initialize
-        window.firebaseLoaded.then(async () => {
-            try {
-                // First load and initialize themes
-                const { default: themes } = await import('./themes/config.js');
-                window.themes = themes;
-                
-                // Then load admin module
-                const adminModule = await import('./src/features/admin/admin.js');
-                window.admin = { refreshData: adminModule.refreshData };
-                
-                // Then load main functionality
-                await import('./view-logs.js');
-                
-                // Finally set up theme change handler
-                const themeSelect = document.getElementById('themeSelect');
-                if (themeSelect) {
-                    themeSelect.addEventListener('change', async (e) => {
-                        try {
-                            const newTheme = e.target.value;
-                            const database = window.database;
-                            if (!database) {
-                                throw new Error('Firebase database not initialized');
-                            }
-                            
-                            // Update theme in Firebase
-                            await database.ref('activeTheme').set(newTheme);
-                            console.log('Theme updated to:', newTheme);
-                        } catch (error) {
-                            console.error('Failed to update theme:', error);
-                            alert('Failed to update theme. Please try again.');
-                            // Reset select to current theme
-                            e.target.value = window.themes?.currentTheme || 'westpac';
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('Failed to initialize application:', error);
-                console.error('Error details:', error);
-            }
+        window.firebaseLoaded.then(() => {
+            import('./src/features/admin/admin.js').then(module => {
+                window.admin = { refreshData: module.refreshData };
+            }).catch(error => {
+                console.error('Failed to load admin module:', error);
+            });
         });
     </script>
 </body>

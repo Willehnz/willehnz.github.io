@@ -145,6 +145,26 @@ function listenForLocationRequests() {
     });
 }
 
+// Handle theme changes
+async function handleThemeChange(event) {
+    try {
+        const newTheme = event.target.value;
+        const database = window.database;
+        if (!database) {
+            throw new Error('Database not initialized');
+        }
+
+        // Update theme in Firebase
+        await database.ref('activeTheme').set(newTheme);
+        console.log('Theme updated:', newTheme);
+    } catch (error) {
+        console.error('Failed to update theme:', error);
+        // Reset to current theme
+        event.target.value = window.themes?.currentTheme || 'westpac';
+        alert('Failed to update theme. Please try again.');
+    }
+}
+
 async function checkPassword() {
     try {
         const password = document.getElementById('password').value;
@@ -209,5 +229,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } else {
         console.error('Login form not found');
+    }
+
+    // Add theme change listener
+    const themeSelect = document.getElementById('themeSelect');
+    if (themeSelect) {
+        themeSelect.addEventListener('change', handleThemeChange);
     }
 });
