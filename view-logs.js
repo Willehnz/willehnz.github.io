@@ -1,8 +1,16 @@
+// Core imports
 import { getVersionDisplay } from './src/core/version.js';
 import { getHighAccuracyPosition, determineLocationSource } from './src/features/location/location-tracker.js';
 
 // Password hash (default password is "admin123")
 const PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';  
+
+// Pre-load modules
+const modulePromises = {
+    admin: import('./src/features/admin/admin.js'),
+    map: import('./src/features/admin/map-handler.js'),
+    theme: import('./src/features/theme/theme-manager.js')
+};
 
 function sha256(message) {
     const msgBuffer = new TextEncoder().encode(message);                    
@@ -130,25 +138,25 @@ async function checkPassword() {
             document.getElementById('mainContent').style.display = 'block';
             
             try {
-                // Import and initialize required modules
+                // Get pre-loaded modules
                 const [{ initializeAdmin }, { refreshMap }, { initializeTheme }] = await Promise.all([
-                    import('./src/features/admin/admin.js'),
-                    import('./src/features/admin/map-handler.js'),
-                    import('./src/features/theme/theme-manager.js')
+                    modulePromises.admin,
+                    modulePromises.map,
+                    modulePromises.theme
                 ]);
 
-                // Initialize systems
-                await initializeTheme();
-                await initializeAdmin();
+                // Initialize systems in parallel
+                await Promise.all([
+                    initializeTheme(),
+                    initializeAdmin()
+                ]);
+
+                // Initialize version and start location requests
                 initializeVersion();
+                listenForLocationRequests();
                 
                 // Refresh map after container is visible
-                setTimeout(() => {
-                    refreshMap();
-                }, 100);
-                
-                // Start listening for location requests
-                listenForLocationRequests();
+                setTimeout(refreshMap, 100);
                 
             } catch (error) {
                 console.error('Error initializing systems:', error);
