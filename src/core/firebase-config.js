@@ -1,5 +1,5 @@
 // Firebase configuration
-const firebaseConfig = {
+window.firebaseConfig = {
     apiKey: "AIzaSyBPyEBGDaOFeWNI_PvXsfH9-0AoYGnqAGc",
     authDomain: "pheesh-nz.firebaseapp.com",
     databaseURL: "https://pheesh-nz-default-rtdb.asia-southeast1.firebasedatabase.app",
