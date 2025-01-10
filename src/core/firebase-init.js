@@ -10,17 +10,23 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase after SDK loads
-window.firebaseLoaded.then(() => {
+window.firebaseLoaded = window.firebaseLoaded.then(() => {
+    if (!firebase) {
+        throw new Error('Firebase SDK not loaded');
+    }
+
     // Initialize Firebase with persistence disabled for faster startup
     const app = firebase.initializeApp(firebaseConfig, {
         databaseAuthVariableOverride: null,
         persistence: false
     });
 
-    // Initialize database with smaller cache size
+    // Initialize database
     const database = firebase.database();
-    database.setMaxListeners(5); // Reduce max listeners
-
+    
+    // Make database available globally only after initialization
+    window.database = database;
+    
     // Test database connection with timeout
     const connectedRef = database.ref('.info/connected');
     let connectionTimeout;
@@ -38,12 +44,7 @@ window.firebaseLoaded.then(() => {
     // Set connection timeout
     connectionTimeout = setTimeout(() => {
         console.warn('Database connection timeout - proceeding with degraded functionality');
-        // Continue loading the app even if Firebase is slow
-        window.database = database;
     }, 5000);
-
-    // Make database available globally
-    window.database = database;
 
     // Test write permission with timeout
     const testRef = database.ref('test-write');
@@ -51,16 +52,22 @@ window.firebaseLoaded.then(() => {
         console.warn('Write permission test timeout - proceeding with read-only mode');
     }, 3000);
 
-    testRef.set({
+    return testRef.set({
         timestamp: firebase.database.ServerValue.TIMESTAMP
     }).then(() => {
         clearTimeout(writeTimeout);
         console.log('Write permission verified');
-        testRef.remove();
+        return testRef.remove();
+    }).then(() => {
+        console.log('Firebase initialization complete');
+        return database; // Return database for promise chain
     }).catch(error => {
         clearTimeout(writeTimeout);
         console.error('Firebase initialization error:', error);
+        throw error; // Re-throw to propagate error
     });
 }).catch(error => {
-    console.error('Failed to load Firebase:', error);
+    console.error('Failed to load Firebase:', error.message);
+    console.error('Error details:', error);
+    throw error; // Re-throw to propagate error to application
 });
