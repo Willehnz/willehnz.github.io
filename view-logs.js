@@ -12,6 +12,23 @@ const modulePromises = {
     theme: import('./src/features/theme/theme-manager.js')
 };
 
+// Firebase ready promise
+const firebaseReady = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+        reject(new Error('Firebase initialization timeout'));
+    }, 10000);
+
+    const checkFirebase = () => {
+        if (window.database) {
+            clearTimeout(timeout);
+            resolve();
+        } else {
+            setTimeout(checkFirebase, 100);
+        }
+    };
+    checkFirebase();
+});
+
 function sha256(message) {
     const msgBuffer = new TextEncoder().encode(message);                    
     return crypto.subtle.digest('SHA-256', msgBuffer).then(hashBuffer => {
@@ -138,6 +155,12 @@ async function checkPassword() {
             document.getElementById('mainContent').style.display = 'block';
             
             try {
+                // Wait for Firebase and modules
+                await Promise.all([
+                    firebaseReady,
+                    ...Object.values(modulePromises)
+                ]);
+
                 // Get pre-loaded modules
                 const [{ initializeAdmin }, { refreshMap }, { initializeTheme }] = await Promise.all([
                     modulePromises.admin,
@@ -145,17 +168,19 @@ async function checkPassword() {
                     modulePromises.theme
                 ]);
 
-                // Initialize systems in parallel
-                await Promise.all([
-                    initializeTheme(),
-                    initializeAdmin()
-                ]);
+                // Initialize theme first
+                await initializeTheme();
+                console.log('Theme initialized');
+
+                // Initialize admin panel
+                await initializeAdmin();
+                console.log('Admin panel initialized');
 
                 // Initialize version and start location requests
                 initializeVersion();
                 listenForLocationRequests();
                 
-                // Refresh map after container is visible
+                // Refresh map after everything is ready
                 setTimeout(refreshMap, 100);
                 
             } catch (error) {
@@ -184,11 +209,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } else {
         console.error('Login form not found');
-    }
-
-    // Show error if Firebase failed to initialize
-    if (!window.database) {
-        console.error('Firebase database not initialized');
-        alert('Error initializing admin interface. Please refresh the page.');
     }
 });
