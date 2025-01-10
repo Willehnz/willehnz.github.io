@@ -6,10 +6,11 @@ window.firebaseLoaded = window.firebaseLoaded.then(async () => {
 
     // Initialize Firebase with persistence disabled for faster startup
     const app = firebase.initializeApp(firebaseConfig, {
+        databaseAuthVariableOverride: null,
         persistence: false
     });
 
-    // Initialize database with retry logic
+    // Initialize database
     const database = firebase.database();
     let retryCount = 0;
     const maxRetries = 3;
@@ -17,42 +18,33 @@ window.firebaseLoaded = window.firebaseLoaded.then(async () => {
     // Make database available globally
     window.database = database;
 
-    // Enhanced connection monitoring
-    const connectedRef = database.ref('.info/connected');
-    let connectionTimeout;
-    let isConnected = false;
+    // Wait for database connection
+    await new Promise((resolve, reject) => {
+        const connectedRef = database.ref('.info/connected');
+        const timeout = setTimeout(() => {
+            reject(new Error('Database connection timeout'));
+        }, 10000);
 
-    // Connection state handler
-    const handleConnectionState = (snapshot) => {
-        clearTimeout(connectionTimeout);
-        isConnected = snapshot.val() === true;
-        console.log('Database connection state:', isConnected);
-        
-        if (!isConnected && document.visibilityState !== 'hidden') {
-            console.warn('Connection lost - attempting to reconnect...');
-            if (retryCount < maxRetries) {
-                retryCount++;
-                console.log(`Retry attempt ${retryCount} of ${maxRetries}`);
-                database.goOnline(); // Force reconnection attempt
-            } else {
-                console.error('Max retries reached - please refresh the page');
+        connectedRef.on('value', (snapshot) => {
+            const isConnected = snapshot.val() === true;
+            console.log('Database connection state:', isConnected);
+            
+            if (isConnected) {
+                clearTimeout(timeout);
+                resolve();
+            } else if (document.visibilityState !== 'hidden') {
+                console.warn('Connection lost - attempting to reconnect...');
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    console.log(`Retry attempt ${retryCount} of ${maxRetries}`);
+                    database.goOnline();
+                } else {
+                    clearTimeout(timeout);
+                    reject(new Error('Max retries reached'));
+                }
             }
-        } else if (isConnected) {
-            retryCount = 0; // Reset retry count on successful connection
-            console.log('Connection restored');
-        }
-    };
-
-    // Set up connection monitoring
-    connectedRef.on('value', handleConnectionState);
-    
-    // Initial connection timeout
-    connectionTimeout = setTimeout(() => {
-        if (!isConnected) {
-            console.warn('Initial connection timeout - attempting to proceed...');
-            database.goOnline(); // Force connection attempt
-        }
-    }, 10000); // Longer initial timeout
+        });
+    });
 
     // Test write permission with retry
     const testWrite = async () => {
