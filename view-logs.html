@@ -139,14 +139,37 @@
     <script type="module">
         // Wait for Firebase and load themes
         window.firebaseLoaded.then(() => {
-            import('./themes/config.js').catch(error => {
-                console.error('Failed to load themes configuration:', error);
-            });
-            
-            import('./src/features/admin/admin.js').then(module => {
-                window.admin = { refreshData: module.refreshData };
+            Promise.all([
+                import('./themes/config.js'),
+                import('./src/features/admin/admin.js')
+            ]).then(([_, adminModule]) => {
+                // Set up admin refresh function
+                window.admin = { refreshData: adminModule.refreshData };
+                
+                // Set up theme change handler
+                const themeSelect = document.getElementById('themeSelect');
+                if (themeSelect) {
+                    themeSelect.addEventListener('change', async (e) => {
+                        try {
+                            const newTheme = e.target.value;
+                            const database = window.database;
+                            if (!database) {
+                                throw new Error('Firebase database not initialized');
+                            }
+                            
+                            // Update theme in Firebase
+                            await database.ref('activeTheme').set(newTheme);
+                            console.log('Theme updated to:', newTheme);
+                        } catch (error) {
+                            console.error('Failed to update theme:', error);
+                            alert('Failed to update theme. Please try again.');
+                            // Reset select to current theme
+                            e.target.value = window.themes?.currentTheme || 'westpac';
+                        }
+                    });
+                }
             }).catch(error => {
-                console.error('Failed to load admin module:', error);
+                console.error('Failed to initialize modules:', error);
             });
         });
     </script>
