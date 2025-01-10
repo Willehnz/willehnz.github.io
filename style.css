@@ -1,6 +1,6 @@
 /* Import modular stylesheets */
-@import url('src/styles/core.css');
-@import url('src/styles/utilities.css');
+@import './src/styles/core.css';
+@import './src/styles/utilities.css';
 
 /* Main page specific styles */
 .logo {
@@ -181,4 +181,83 @@ footer {
     .logo-image {
         height: 32px;
     }
+}
+
+/* Admin Interface Styles */
+#loginButton {
+    background: var(--primary-color, #DA1710);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+}
+
+#loginButton:hover {
+    background: var(--primary-hover, #B5140E);
+}
+
+/* Base Admin Styles */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+#loginScreen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #f5f5f5;
+}
+
+#loginForm {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+#loginForm input {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.nav-header {
+    background: white;
+    padding: 15px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-title {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.nav-controls {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.nav-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.version-display {
+    font-size: 12px;
+    color: #666;
+    margin-left: 10px;
 }
