@@ -156,12 +156,52 @@ async function handleThemeChange(event) {
 
         // Update theme in Firebase
         await database.ref('activeTheme').set(newTheme);
-        console.log('Theme updated:', newTheme);
+        
+        // Show loading indicator
+        const themeSelect = document.getElementById('themeSelect');
+        const toast = document.getElementById('toast');
+        themeSelect.disabled = true;
+        themeSelect.style.opacity = '0.7';
+        toast.textContent = 'Updating theme...';
+        toast.className = 'toast show';
+        
+        // Wait for theme change confirmation
+        const confirmed = await new Promise((resolve) => {
+            const timeout = setTimeout(() => resolve(false), 5000); // 5s timeout
+            
+            const handleThemeChanged = (e) => {
+                clearTimeout(timeout);
+                window.removeEventListener('themeChanged', handleThemeChanged);
+                resolve(e.detail);
+            };
+            
+            window.addEventListener('themeChanged', handleThemeChanged);
+        });
+
+        // Re-enable select
+        themeSelect.disabled = false;
+        themeSelect.style.opacity = '1';
+
+        if (confirmed && confirmed.success) {
+            toast.textContent = 'Theme updated successfully';
+            toast.className = 'toast show success';
+            console.log('Theme updated successfully:', newTheme);
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 3000);
+        } else {
+            const errorMsg = confirmed?.error || 'Theme change timed out';
+            throw new Error(errorMsg);
+        }
     } catch (error) {
         console.error('Failed to update theme:', error);
         // Reset to current theme
         event.target.value = window.themes?.currentTheme || 'westpac';
-        alert('Failed to update theme. Please try again.');
+        toast.textContent = `Failed to update theme: ${error.message}`;
+        toast.className = 'toast show error';
+        setTimeout(() => {
+            toast.className = 'toast';
+        }, 3000);
     }
 }
 

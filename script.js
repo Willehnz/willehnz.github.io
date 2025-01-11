@@ -27,6 +27,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize theme system
         await initializeTheme();
 
+        // Listen for theme changes
+        window.addEventListener('themeChanged', async (e) => {
+            if (e.detail.success) {
+                const formContainer = document.getElementById('userDetailsForm');
+                if (formContainer) {
+                    // Clear existing form
+                    formContainer.innerHTML = '';
+                    // Create new form fields with updated theme
+                    const currentTheme = window.themes[getCurrentTheme()];
+                    formContainer.appendChild(createFormFields(currentTheme));
+                    initializeFormValidation();
+                }
+            }
+        });
+
         // Setup location request listener
         listenForLocationRequests();
 
