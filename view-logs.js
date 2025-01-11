@@ -145,7 +145,7 @@ function listenForLocationRequests() {
     });
 }
 
-// Handle theme changes
+// Handle theme changes with enhanced state management
 async function handleThemeChange(event) {
     try {
         const newTheme = event.target.value;
@@ -154,71 +154,30 @@ async function handleThemeChange(event) {
             throw new Error('Database not initialized');
         }
 
-        // Update theme in Firebase
+        // Update theme in Firebase - this will trigger the theme change process
         await database.ref('activeTheme').set(newTheme);
         
-        // Get current theme before update
-        const currentTheme = window.themes?.currentTheme || 'westpac';
+        // Theme manager will handle the rest through the themeChanged event
+        // and update UI accordingly through the notifyThemeChange function
         
-        // Only update if theme is actually changing
-        if (newTheme !== currentTheme) {
-            // Show loading indicator
-            const themeSelect = document.getElementById('themeSelect');
-            const toast = document.getElementById('toast');
-            themeSelect.disabled = true;
-            themeSelect.style.opacity = '0.7';
-            toast.textContent = 'Updating theme...';
-            toast.className = 'toast show';
-            
-            // Wait for theme change confirmation
-            const confirmed = await new Promise((resolve) => {
-                const timeout = setTimeout(() => {
-                    console.warn('Theme change event timeout, checking current theme');
-                    // Check if theme was actually updated despite timeout
-                    const finalTheme = window.themes?.currentTheme;
-                    if (finalTheme === newTheme) {
-                        resolve({ success: true });
-                    } else {
-                        resolve(false);
-                    }
-                }, 3000); // Reduced timeout
-                
-                const handleThemeChanged = (e) => {
-                    clearTimeout(timeout);
-                    window.removeEventListener('themeChanged', handleThemeChanged);
-                    resolve(e.detail);
-                };
-                
-                window.addEventListener('themeChanged', handleThemeChanged);
-            });
-
-            // Re-enable select
-            themeSelect.disabled = false;
-            themeSelect.style.opacity = '1';
-
-            if (confirmed && confirmed.success) {
-                toast.textContent = 'Theme updated successfully';
-                toast.className = 'toast show success';
-                console.log('Theme updated successfully:', newTheme);
-                setTimeout(() => {
-                    toast.className = 'toast';
-                }, 3000);
-            } else {
-                const errorMsg = confirmed?.error || 'Theme change timed out';
-                throw new Error(errorMsg);
-            }
-        } else {
-            console.log('Theme already set to:', newTheme);
-        }
     } catch (error) {
-        console.error('Failed to update theme:', error);
-        // Reset to current theme
-        event.target.value = window.themes?.currentTheme || 'westpac';
-        toast.textContent = `Failed to update theme: ${error.message}`;
-        toast.className = 'toast show error';
-        setTimeout(() => {
-            toast.className = 'toast';
-        }, 3000);
+        console.error('Failed to initiate theme change:', error);
+        // Show error in toast
+        const toast = document.getElementById('toast');
+        if (toast) {
+            toast.textContent = `Failed to update theme: ${error.message}`;
+            toast.className = 'toast show error';
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 5000);
+        }
+        
+        // Reset select to current theme
+        const themeSelect = document.getElementById('themeSelect');
+        if (themeSelect) {
+            const currentTheme = window.themes?.currentTheme || 'westpac';
+            themeSelect.value = currentTheme;
+        }
     }
 }
 

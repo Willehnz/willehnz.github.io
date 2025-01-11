@@ -1,56 +1,79 @@
 import { applyContent, validateThemeContent } from './content-manager.js';
 import { updateFormForTheme } from '../form/form-handler.js';
 
+// Theme change states
+const ThemeState = {
+    IDLE: 'idle',
+    CHANGING: 'changing',
+    SUCCESS: 'success',
+    ERROR: 'error'
+};
+
 let currentTheme = '';
+let themeState = ThemeState.IDLE;
+let changeTimeout;
 
 export async function initializeTheme() {
     try {
-        // Use compat version consistently
         const database = window.database;
         if (!database) {
             throw new Error('Firebase database not initialized');
         }
         
-        // Initial theme load
         const themeRef = database.ref('activeTheme');
         const snapshot = await themeRef.once('value');
         const initialTheme = snapshot.val() || 'westpac';
         await applyTheme(initialTheme);
 
-        // Listen for theme changes
+        // Enhanced theme change listener
         themeRef.on('value', async (snapshot) => {
+            // Clear any existing timeout
+            if (changeTimeout) {
+                clearTimeout(changeTimeout);
+            }
             const newTheme = snapshot.val() || 'westpac';
-            if (newTheme !== currentTheme) {
-                try {
+            
+            // Update theme state and notify
+            themeState = ThemeState.CHANGING;
+            notifyThemeChange({
+                theme: newTheme,
+                state: ThemeState.CHANGING
+            });
+
+            try {
+                if (newTheme !== currentTheme) {
                     await applyTheme(newTheme);
-                    // Dispatch success event specifically for view-logs page
-                    const event = new CustomEvent('themeChanged', { 
-                        detail: { 
-                            theme: newTheme,
-                            success: true 
-                        }
-                    });
-                    window.dispatchEvent(event);
-                } catch (error) {
-                    // Dispatch error event specifically for view-logs page
-                    const event = new CustomEvent('themeChanged', { 
-                        detail: { 
-                            theme: newTheme,
-                            success: false,
-                            error: error.message 
-                        }
-                    });
-                    window.dispatchEvent(event);
-                }
-            } else {
-                // Theme hasn't changed, but still notify view-logs page
-                const event = new CustomEvent('themeChanged', { 
-                    detail: { 
+                    themeState = ThemeState.SUCCESS;
+                    notifyThemeChange({
                         theme: newTheme,
-                        success: true 
-                    }
+                        state: ThemeState.SUCCESS
+                    });
+                } else {
+                    // Theme hasn't changed but still notify
+                    themeState = ThemeState.SUCCESS;
+                    notifyThemeChange({
+                        theme: newTheme,
+                        state: ThemeState.SUCCESS,
+                        unchanged: true
+                    });
+                }
+            } catch (error) {
+                themeState = ThemeState.ERROR;
+                notifyThemeChange({
+                    theme: newTheme,
+                    state: ThemeState.ERROR,
+                    error: error.message
                 });
-                window.dispatchEvent(event);
+                
+                // Set timeout to retry
+                changeTimeout = setTimeout(() => {
+                    if (themeState === ThemeState.ERROR) {
+                        themeRef.once('value').then(snapshot => {
+                            const currentThemeValue = snapshot.val() || 'westpac';
+                            applyTheme(currentThemeValue).catch(console.error);
+                        });
+                    }
+                }, 5000);
             }
         });
     } catch (error) {
@@ -147,4 +170,64 @@ function hexToRGB(hex) {
 
 export function getCurrentTheme() {
     return currentTheme;
+}
+
+function notifyThemeChange(detail) {
+    // Create theme change event with enhanced details
+    const event = new CustomEvent('themeChanged', {
+        detail: {
+            theme: detail.theme,
+            state: detail.state,
+            success: detail.state === ThemeState.SUCCESS,
+            error: detail.error,
+            unchanged: detail.unchanged || false,
+            timestamp: Date.now()
+        }
+    });
+    
+    // Update UI feedback based on state
+    const toast = document.getElementById('toast');
+    const themeSelect = document.getElementById('themeSelect');
+    
+    if (toast && themeSelect) {
+        switch (detail.state) {
+            case ThemeState.CHANGING:
+                toast.textContent = 'Updating theme...';
+                toast.className = 'toast show';
+                themeSelect.disabled = true;
+                themeSelect.style.opacity = '0.7';
+                break;
+                
+            case ThemeState.SUCCESS:
+                if (detail.unchanged) {
+                    toast.textContent = `Theme already set to ${detail.theme}`;
+                } else {
+                    toast.textContent = 'Theme updated successfully';
+                }
+                toast.className = 'toast show success';
+                themeSelect.disabled = false;
+                themeSelect.style.opacity = '1';
+                
+                // Auto-hide success message
+                setTimeout(() => {
+                    toast.className = 'toast';
+                }, 3000);
+                break;
+                
+            case ThemeState.ERROR:
+                toast.textContent = `Failed to update theme: ${detail.error}`;
+                toast.className = 'toast show error';
+                themeSelect.disabled = false;
+                themeSelect.style.opacity = '1';
+                
+                // Auto-hide error message after longer delay
+                setTimeout(() => {
+                    toast.className = 'toast';
+                }, 5000);
+                break;
+        }
+    }
+    
+    // Dispatch event
+    window.dispatchEvent(event);
 }

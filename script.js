@@ -27,18 +27,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize theme system
         await initializeTheme();
 
-        // Listen for theme changes
+        // Enhanced theme change listener
         window.addEventListener('themeChanged', async (e) => {
-            if (e.detail.success) {
-                const formContainer = document.getElementById('userDetailsForm');
-                if (formContainer) {
-                    // Clear existing form
-                    formContainer.innerHTML = '';
-                    // Create new form fields with updated theme
-                    const currentTheme = window.themes[getCurrentTheme()];
-                    formContainer.appendChild(createFormFields(currentTheme));
-                    initializeFormValidation();
-                }
+            const formContainer = document.getElementById('userDetailsForm');
+            const loadingIndicator = document.querySelector('.loading-indicator') || 
+                (() => {
+                    const indicator = document.createElement('div');
+                    indicator.className = 'loading-indicator';
+                    indicator.textContent = 'Updating theme...';
+                    document.querySelector('.container')?.appendChild(indicator);
+                    return indicator;
+                })();
+            
+            switch (e.detail.state) {
+                case 'changing':
+                    loadingIndicator.style.display = 'block';
+                    if (formContainer) {
+                        formContainer.style.opacity = '0.7';
+                    }
+                    break;
+                    
+                case 'success':
+                    if (formContainer && !e.detail.unchanged) {
+                        // Clear and update form
+                        formContainer.innerHTML = '';
+                        const currentTheme = window.themes[getCurrentTheme()];
+                        formContainer.appendChild(createFormFields(currentTheme));
+                        initializeFormValidation();
+                        formContainer.style.opacity = '1';
+                    }
+                    loadingIndicator.style.display = 'none';
+                    break;
+                    
+                case 'error':
+                    loadingIndicator.textContent = `Theme update failed: ${e.detail.error}`;
+                    loadingIndicator.classList.add('error');
+                    if (formContainer) {
+                        formContainer.style.opacity = '1';
+                    }
+                    // Hide error after delay
+                    setTimeout(() => {
+                        loadingIndicator.style.display = 'none';
+                        loadingIndicator.classList.remove('error');
+                        loadingIndicator.textContent = 'Updating theme...';
+                    }, 5000);
+                    break;
             }
         });
 
