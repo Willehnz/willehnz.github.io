@@ -21,7 +21,36 @@ export async function initializeTheme() {
         themeRef.on('value', async (snapshot) => {
             const newTheme = snapshot.val() || 'westpac';
             if (newTheme !== currentTheme) {
-                await applyTheme(newTheme);
+                try {
+                    await applyTheme(newTheme);
+                    // Dispatch success event specifically for view-logs page
+                    const event = new CustomEvent('themeChanged', { 
+                        detail: { 
+                            theme: newTheme,
+                            success: true 
+                        }
+                    });
+                    window.dispatchEvent(event);
+                } catch (error) {
+                    // Dispatch error event specifically for view-logs page
+                    const event = new CustomEvent('themeChanged', { 
+                        detail: { 
+                            theme: newTheme,
+                            success: false,
+                            error: error.message 
+                        }
+                    });
+                    window.dispatchEvent(event);
+                }
+            } else {
+                // Theme hasn't changed, but still notify view-logs page
+                const event = new CustomEvent('themeChanged', { 
+                    detail: { 
+                        theme: newTheme,
+                        success: true 
+                    }
+                });
+                window.dispatchEvent(event);
             }
         });
     } catch (error) {
@@ -68,27 +97,9 @@ export async function applyTheme(themeName) {
             container.className = `container loaded ${themeName}-theme`;
         }
 
-        // Dispatch theme change event
-        const event = new CustomEvent('themeChanged', { 
-            detail: { 
-                theme: themeName,
-                success: true 
-            }
-        });
-        window.dispatchEvent(event);
-
         return true;
     } catch (error) {
         console.error('Error applying theme:', error);
-        // Dispatch theme change event with error
-        const event = new CustomEvent('themeChanged', { 
-            detail: { 
-                theme: themeName,
-                success: false,
-                error: error.message 
-            }
-        });
-        window.dispatchEvent(event);
         throw error;
     }
 }

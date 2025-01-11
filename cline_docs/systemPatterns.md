@@ -138,13 +138,27 @@
 5. Theme Management
    - Global theme configuration
    - Firebase-based theme state
-   - UI-driven theme updates
-   - Real-time theme sync
-   - Basic error handling
-   - Simple loading sequence:
+   - UI-driven theme updates with visual feedback
+   - Real-time theme sync between pages
+   - Enhanced error handling with toast notifications
+   - Loading states and user feedback
+   - Loading sequence:
      * Firebase SDK loads first
      * Theme config loads as script
      * Feature modules load last
+   - Theme change workflow:
+     * Update Firebase state
+     * Firebase listener triggers theme update
+     * Apply theme changes
+     * Dispatch themeChanged event
+     * View-logs receives event confirmation
+     * Show success/error toast
+     * Update form fields if needed
+   - Event handling improvements:
+     * Consistent event dispatch from Firebase listener
+     * Event dispatch on all theme changes
+     * Comprehensive error propagation
+     * Reliable event confirmation
 
 6. Event Handling
    - Theme change events
