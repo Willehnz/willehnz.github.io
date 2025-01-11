@@ -1,5 +1,23 @@
+// Create Firebase loaded promise
+window.firebaseLoaded = new Promise((resolve) => {
+    // Check if Firebase SDK is already loaded
+    if (typeof firebase !== 'undefined') {
+        resolve();
+    } else {
+        // Wait for Firebase SDK to load
+        const checkFirebase = () => {
+            if (typeof firebase !== 'undefined') {
+                resolve();
+            } else {
+                setTimeout(checkFirebase, 100);
+            }
+        };
+        checkFirebase();
+    }
+});
+
 // Initialize Firebase after SDK loads
-window.firebaseLoaded = window.firebaseLoaded.then(async () => {
+window.firebaseLoaded.then(async () => {
     if (!firebase) {
         throw new Error('Firebase SDK not loaded');
     }

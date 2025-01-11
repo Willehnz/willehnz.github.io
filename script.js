@@ -24,8 +24,18 @@ function getGeolocationErrorMessage(error) {
 // Initialize Firebase and load theme
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        // Wait for Firebase to be ready
+        await window.firebaseLoaded;
+        console.log('Firebase SDK loaded');
+
+        // Wait for database connection
+        if (!window.database) {
+            throw new Error('Firebase database not initialized');
+        }
+
         // Initialize theme system
         await initializeTheme();
+        console.log('Theme system initialized');
 
         // Enhanced theme change listener
         window.addEventListener('themeChanged', async (e) => {
