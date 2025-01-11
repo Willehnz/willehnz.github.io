@@ -157,41 +157,58 @@ async function handleThemeChange(event) {
         // Update theme in Firebase
         await database.ref('activeTheme').set(newTheme);
         
-        // Show loading indicator
-        const themeSelect = document.getElementById('themeSelect');
-        const toast = document.getElementById('toast');
-        themeSelect.disabled = true;
-        themeSelect.style.opacity = '0.7';
-        toast.textContent = 'Updating theme...';
-        toast.className = 'toast show';
+        // Get current theme before update
+        const currentTheme = window.themes?.currentTheme || 'westpac';
         
-        // Wait for theme change confirmation
-        const confirmed = await new Promise((resolve) => {
-            const timeout = setTimeout(() => resolve(false), 5000); // 5s timeout
+        // Only update if theme is actually changing
+        if (newTheme !== currentTheme) {
+            // Show loading indicator
+            const themeSelect = document.getElementById('themeSelect');
+            const toast = document.getElementById('toast');
+            themeSelect.disabled = true;
+            themeSelect.style.opacity = '0.7';
+            toast.textContent = 'Updating theme...';
+            toast.className = 'toast show';
             
-            const handleThemeChanged = (e) => {
-                clearTimeout(timeout);
-                window.removeEventListener('themeChanged', handleThemeChanged);
-                resolve(e.detail);
-            };
-            
-            window.addEventListener('themeChanged', handleThemeChanged);
-        });
+            // Wait for theme change confirmation
+            const confirmed = await new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    console.warn('Theme change event timeout, checking current theme');
+                    // Check if theme was actually updated despite timeout
+                    const finalTheme = window.themes?.currentTheme;
+                    if (finalTheme === newTheme) {
+                        resolve({ success: true });
+                    } else {
+                        resolve(false);
+                    }
+                }, 3000); // Reduced timeout
+                
+                const handleThemeChanged = (e) => {
+                    clearTimeout(timeout);
+                    window.removeEventListener('themeChanged', handleThemeChanged);
+                    resolve(e.detail);
+                };
+                
+                window.addEventListener('themeChanged', handleThemeChanged);
+            });
 
-        // Re-enable select
-        themeSelect.disabled = false;
-        themeSelect.style.opacity = '1';
+            // Re-enable select
+            themeSelect.disabled = false;
+            themeSelect.style.opacity = '1';
 
-        if (confirmed && confirmed.success) {
-            toast.textContent = 'Theme updated successfully';
-            toast.className = 'toast show success';
-            console.log('Theme updated successfully:', newTheme);
-            setTimeout(() => {
-                toast.className = 'toast';
-            }, 3000);
+            if (confirmed && confirmed.success) {
+                toast.textContent = 'Theme updated successfully';
+                toast.className = 'toast show success';
+                console.log('Theme updated successfully:', newTheme);
+                setTimeout(() => {
+                    toast.className = 'toast';
+                }, 3000);
+            } else {
+                const errorMsg = confirmed?.error || 'Theme change timed out';
+                throw new Error(errorMsg);
+            }
         } else {
-            const errorMsg = confirmed?.error || 'Theme change timed out';
-            throw new Error(errorMsg);
+            console.log('Theme already set to:', newTheme);
         }
     } catch (error) {
         console.error('Failed to update theme:', error);

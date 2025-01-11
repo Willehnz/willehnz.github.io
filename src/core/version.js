@@ -1,9 +1,9 @@
 // Version information
 export const VERSION = {
-    number: '1.0.41',
+    number: '1.0.42',
     date: '2025-01-11',
-    time: '13:28:23',
-    commit: '66671f4',
+    time: '13:35:07',
+    commit: '31cd0f1',
     toString() {
         return `v${this.number} (${this.date})`;
     }
