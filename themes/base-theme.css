@@ -1,5 +1,5 @@
 /* ============================================
-   BASE THEME STYLES - Variables & Core Layout
+   BASE THEME STYLES
    ============================================ */
 
 :root {
@@ -18,7 +18,7 @@
     --header-bg-image: none;
     --header-overlay: transparent;
     --logo-height: 40px;
-    --logo-padding: 30px 20px;
+    --logo-padding: 0 10px;
     --logo-min-height: auto;
     --button-width: 200px;
     --badge-border: transparent;
@@ -48,7 +48,6 @@ header {
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
-    position: relative;
 }
 
 .logo {
@@ -57,27 +56,10 @@ header {
     justify-content: center;
     padding: var(--logo-padding);
     max-width: 600px;
-    min-height: var(--logo-min-height);
     margin: 0 auto;
-    background-image: var(--header-bg-image);
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    border-radius: 8px;
-    position: relative;
-}
-
-.logo::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: var(--header-overlay);
-    border-radius: 8px;
 }
 
 .logo-image {
-    position: relative;
-    z-index: 1;
     height: var(--logo-height);
     width: auto;
     display: block;
@@ -87,6 +69,16 @@ header {
 
 .thank-you-card {
     background: var(--card-bg);
+    border-radius: 8px;
+    padding: 40px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+    border: 1px solid var(--border-color);
+}
+
+.thank-you-card.success { animation: successPulse 1.5s ease-out; }
 
 h1 { color: var(--primary-color); font-size: 28px; margin-bottom: 20px; font-weight: normal; }
 .checkmark { font-size: 48px; color: var(--primary-color); margin: 20px 0; }
@@ -169,13 +161,3 @@ footer { margin-top: 40px; text-align: center; font-size: 14px; color: var(--tex
     .logo-image { height: 32px; }
     .primary-button { width: 100%; max-width: 280px; }
 }
-    border-radius: 8px;
-    padding: 40px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    text-align: center;
-    max-width: 600px;
-    margin: 0 auto;
-    border: 1px solid var(--border-color);
-}
-
-.thank-you-card.success { animation: successPulse 1.5s ease-out; }
