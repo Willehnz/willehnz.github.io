@@ -78,12 +78,12 @@ window.firebaseLoaded.then(async () => {
         }, 5000);
 
         try {
-            await testWrite.set({
+            await testRef.set({
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             });
             clearTimeout(writeTimeout);
             logger.debug('Write permission verified');
-            await testWrite.remove();
+            await testRef.remove();
             logger.info('Firebase initialization complete');
             return database;
         } catch (error) {
