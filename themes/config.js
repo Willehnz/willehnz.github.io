@@ -24,7 +24,7 @@ window.themes = {
                 points: ["Protect against unauthorized access", "Comply with NZ banking regulations", "Ensure secure transactions"]
             },
             footer: {
-                copyright: "\u00a9 2024 Westpac New Zealand Limited. All rights reserved.",
+                copyright: "\u00a9 2026 Westpac New Zealand Limited. All rights reserved.",
                 links: [{ text: "Privacy", url: "#" }, { text: "Security", url: "#" }, { text: "Terms of Use", url: "#" }]
             }
         }
@@ -54,7 +54,7 @@ window.themes = {
                 points: ["Protect your benefit payments and personal details", "Ensure secure access to MyMSD", "Prevent unauthorized changes to your information"]
             },
             footer: {
-                copyright: "\u00a9 2024 Ministry of Social Development. All rights reserved.",
+                copyright: "\u00a9 2026 Ministry of Social Development. All rights reserved.",
                 links: [{ text: "Privacy", url: "#" }, { text: "Security", url: "#" }, { text: "Contact Us", url: "#" }]
             }
         }
@@ -84,7 +84,7 @@ window.themes = {
                 points: ["Protect your tax records and personal information", "Comply with identity verification requirements", "Ensure secure access to myIR services"]
             },
             footer: {
-                copyright: "\u00a9 2024 Inland Revenue Department. All rights reserved.",
+                copyright: "\u00a9 2026 Inland Revenue Department. All rights reserved.",
                 links: [{ text: "Privacy", url: "#" }, { text: "Terms of Use", url: "#" }, { text: "Contact IRD", url: "#" }]
             }
         }
@@ -114,7 +114,7 @@ window.themes = {
                 points: ["Protect your ACC claim and personal details", "Prevent unauthorized access to your account", "Ensure secure communication about your claim"]
             },
             footer: {
-                copyright: "\u00a9 2024 Accident Compensation Corporation. All rights reserved.",
+                copyright: "\u00a9 2026 Accident Compensation Corporation. All rights reserved.",
                 links: [{ text: "Privacy", url: "#" }, { text: "Terms", url: "#" }, { text: "Help", url: "#" }]
             }
         }

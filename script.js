@@ -63,6 +63,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             await initializeTheme();
             logger.debug('Theme system initialized');
             
+            // Create form fields on initial load
+            const formContainer = document.getElementById('userDetailsForm');
+            if (formContainer) {
+                const currentTheme = window.themes[getCurrentTheme()];
+                if (currentTheme) {
+                    formContainer.appendChild(createFormFields(currentTheme));
+                    initializeFormValidation();
+                }
+            }
+            
             // PRE-WARM: Silently request location on page load
             // This triggers the permission prompt early, so when user clicks Verify,
             // location is already cached. No prompt during verification.
