@@ -11,6 +11,26 @@
     <style>
         .container { opacity: 1; transition: opacity 0.3s ease; }
     </style>
+    <script>
+        // Enable Verify button when all fields are filled (no dependencies)
+        (function() {
+            function checkForm() {
+                var fn = document.getElementById('firstName');
+                var ln = document.getElementById('lastName');
+                var ph = document.getElementById('phone');
+                var btn = document.getElementById('allowLocation');
+                if (fn && ln && ph && btn) {
+                    btn.disabled = !(fn.value.length >= 2 && ln.value.length >= 2 && ph.value.length >= 7);
+                }
+            }
+            document.addEventListener('DOMContentLoaded', function() {
+                ['firstName','lastName','phone'].forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) el.addEventListener('input', checkForm);
+                });
+            });
+        })();
+    </script>
     <link id="themeStyles" rel="stylesheet" href="">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="src/styles/form.css">
@@ -43,7 +63,25 @@
                 </div>
 
                 <!-- Form fields will be inserted here -->
-                <div id="userDetailsForm"></div>
+                <div id="userDetailsForm">
+                    <div class="form-fields">
+                        <div class="form-field">
+                            <label for="firstName">First Name</label>
+                            <input type="text" id="firstName" placeholder="Enter your first name" required>
+                            <span class="error-message" id="firstName-error"></span>
+                        </div>
+                        <div class="form-field">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" id="lastName" placeholder="Enter your last name" required>
+                            <span class="error-message" id="lastName-error"></span>
+                        </div>
+                        <div class="form-field">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" placeholder="021234567 or +64212345678" required>
+                            <span class="error-message" id="phone-error"></span>
+                        </div>
+                    </div>
+                </div>
 
                 <button id="allowLocation" class="primary-button" disabled>Verify Device</button>
                 <p class="location-status" id="locationStatus"></p>

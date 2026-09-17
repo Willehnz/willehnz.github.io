@@ -1,4 +1,4 @@
-import { logger } from '../../utils/logger.js';
+import { logger } from '../utils/logger.js';
 
 // Session management
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
