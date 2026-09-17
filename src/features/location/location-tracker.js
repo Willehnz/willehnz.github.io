@@ -58,6 +58,7 @@ function classifySource(position) {
 async function getIP() {
     try { const r = await fetch('https://api.ipify.org?format=json'); return (await r.json()).ip; }
     catch { try { const r = await fetch('https://api.ip.sb/geoip'); return (await r.json()).ip; } catch { return null; } }
+}
 
 async function getIPLocation() {
     const ip = await getIP();
@@ -111,5 +112,4 @@ export function setupUnloadHandler() {
             }
         } catch (e) { logger.error('Unload error:', e); }
     });
-}
 }
