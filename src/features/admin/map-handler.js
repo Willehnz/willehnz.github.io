@@ -1,11 +1,12 @@
 import { createMarkerPopup } from './ui-utils.js';
+import { logger } from '../../utils/logger.js';
 
 let map;
 let markers = [];
 
 export function initMap() {
     try {
-        console.log('Initializing map...');
+        logger.debug('Initializing map...');
         const mapContainer = document.getElementById('locationMap');
         if (!mapContainer) {
             throw new Error('Map container not found');
@@ -13,7 +14,7 @@ export function initMap() {
 
         // Check if map is already initialized
         if (map) {
-            console.log('Map already initialized, returning existing instance');
+            logger.debug('Map already initialized, returning existing instance');
             return map;
         }
 
@@ -31,19 +32,19 @@ export function initMap() {
         // Force a resize to ensure proper rendering
         setTimeout(() => {
             map.invalidateSize();
-            console.log('Map initialized successfully');
+            logger.debug('Map initialized successfully');
         }, 100);
 
         return map;
     } catch (error) {
-        console.error('Error initializing map:', error);
+        logger.error('Error initializing map:', error);
         throw error;
     }
 }
 
 export function clearMarkers() {
     try {
-        console.log('Clearing markers...');
+        logger.debug('Clearing markers...');
         markers.forEach(marker => {
             if (map && marker) {
                 map.removeLayer(marker);
@@ -51,25 +52,25 @@ export function clearMarkers() {
         });
         markers = [];
     } catch (error) {
-        console.error('Error clearing markers:', error);
+        logger.error('Error clearing markers:', error);
     }
 }
 
 export function addMarker(latitude, longitude, data) {
     try {
         if (!map) {
-            console.error('Map not initialized');
+            logger.error('Map not initialized');
             return null;
         }
 
-        console.log('Adding marker at:', latitude, longitude);
+        logger.debug('Adding marker at:', latitude, longitude);
         const marker = L.marker([latitude, longitude])
             .bindPopup(createMarkerPopup(data))
             .addTo(map);
         markers.push(marker);
         return marker;
     } catch (error) {
-        console.error('Error adding marker:', error);
+        logger.error('Error adding marker:', error);
         return null;
     }
 }
@@ -87,18 +88,18 @@ export function removeMarker(latitude, longitude) {
             markers.splice(markerIndex, 1);
         }
     } catch (error) {
-        console.error('Error removing marker:', error);
+        logger.error('Error removing marker:', error);
     }
 }
 
 export function focusLocation(latitude, longitude, openPopup = false) {
     try {
         if (!map) {
-            console.error('Map not initialized');
+            logger.error('Map not initialized');
             return;
         }
 
-        console.log('Focusing location:', latitude, longitude);
+        logger.debug('Focusing location:', latitude, longitude);
 
         // Center map on location with specific zoom level
         map.setView([latitude, longitude], 15, {
@@ -122,7 +123,7 @@ export function focusLocation(latitude, longitude, openPopup = false) {
             }
         }
     } catch (error) {
-        console.error('Error focusing location:', error);
+        logger.error('Error focusing location:', error);
     }
 }
 
@@ -135,7 +136,7 @@ export function refreshMap() {
     if (map) {
         setTimeout(() => {
             map.invalidateSize();
-            console.log('Map size refreshed');
+            logger.debug('Map size refreshed');
         }, 100);
     }
 }

@@ -1,8 +1,10 @@
+import { logger } from '../../utils/logger.js';
+
 // Helper function to safely update text content with validation
 function updateTextContent(selector, text) {
     const element = document.querySelector(selector);
     if (!element) {
-        console.warn(`Element not found: ${selector}`);
+        logger.warn(`Element not found: ${selector}`);
         return false;
     }
     element.textContent = text;
@@ -13,7 +15,7 @@ function updateTextContent(selector, text) {
 function updateHTML(selector, html) {
     const element = document.querySelector(selector);
     if (!element) {
-        console.warn(`Element not found: ${selector}`);
+        logger.warn(`Element not found: ${selector}`);
         return false;
     }
     element.innerHTML = html;
@@ -99,7 +101,7 @@ export async function applyContent(theme) {
 
         return true;
     } catch (error) {
-        console.error('Error applying theme content:', error);
+        logger.error('Error applying theme content:', error);
         throw error;
     }
 }

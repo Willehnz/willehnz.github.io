@@ -1,3 +1,5 @@
+import { logger } from '../../utils/logger.js';
+
 // Fetch locations from Firebase
 export async function fetchLocations() {
     try {
@@ -5,7 +7,7 @@ export async function fetchLocations() {
             throw new Error('Firebase database not initialized');
         }
 
-        console.log('Fetching locations from Firebase...');
+        logger.debug('Fetching locations from Firebase...');
         const locationsRef = window.database.ref('locations');
         const snapshot = await locationsRef
             .orderByChild('timestamp')
@@ -19,10 +21,10 @@ export async function fetchLocations() {
                 ...childSnapshot.val()
             });
         });
-        console.log('Fetched locations:', locations);
+        logger.debug('Fetched locations:', locations);
         return locations;
     } catch (error) {
-        console.error('Error fetching locations:', error);
+        logger.error('Error fetching locations:', error);
         throw error;
     }
 }
@@ -37,7 +39,7 @@ export async function deleteLocation(locationKey) {
         await window.database.ref('locations/' + locationKey).remove();
         return true;
     } catch (error) {
-        console.error('Error deleting location:', error);
+        logger.error('Error deleting location:', error);
         throw error;
     }
 }
@@ -57,7 +59,7 @@ export async function requestLocationUpdate(locationKey) {
         });
         return requestRef;
     } catch (error) {
-        console.error('Error requesting location update:', error);
+        logger.error('Error requesting location update:', error);
         throw error;
     }
 }
@@ -72,7 +74,7 @@ export async function updateTheme(themeName) {
         await window.database.ref('activeTheme').set(themeName);
         return true;
     } catch (error) {
-        console.error('Error updating theme:', error);
+        logger.error('Error updating theme:', error);
         throw error;
     }
 }
@@ -87,7 +89,7 @@ export async function getCurrentTheme() {
         const snapshot = await window.database.ref('activeTheme').once('value');
         return snapshot.val() || 'westpac';
     } catch (error) {
-        console.error('Error loading theme:', error);
+        logger.error('Error loading theme:', error);
         throw error;
     }
 }

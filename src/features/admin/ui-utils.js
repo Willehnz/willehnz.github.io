@@ -87,7 +87,7 @@ function formatUserDetails(data) {
 }
 
 // Create table row for location data
-export function createLocationRow(data, locationKey, onRequestLocation, onDelete) {
+export function createLocationRow(data, locationKey, onRequestLocation, onDelete, onRowClick) {
     const row = document.createElement('tr');
     
     // User Details
@@ -116,15 +116,15 @@ export function createLocationRow(data, locationKey, onRequestLocation, onDelete
     
     // Accuracy
     const accuracyCell = row.insertCell();
-    accuracyCell.textContent = data.accuracy ? `±${Math.round(data.accuracy)}m` : 'Unknown';
+    const accuracyText = data.accuracy ? `±${Math.round(data.accuracy)}m` : 'Unknown';
+    const accuracyClass = getAccuracyClass(data.accuracy);
+    accuracyCell.innerHTML = `<span class="accuracy-indicator"><span class="accuracy-dot ${accuracyClass}"></span>${accuracyText}</span>`;
     
     // Source
     const sourceCell = row.insertCell();
-    const sourceSpan = document.createElement('span');
-    sourceSpan.className = `location-source ${(data.locationSource || 'unknown').toLowerCase().replace(/[\s()]/g, '-')}`;
-    sourceSpan.textContent = data.locationSource || 'Unknown';
-    sourceSpan.setAttribute('title', `Accuracy: ${data.accuracy ? `±${Math.round(data.accuracy)}m` : 'Unknown'}`);
-    sourceCell.appendChild(sourceSpan);
+    const sourceName = data.locationSource || 'Unknown';
+    const sourceClass = getSourceClass(sourceName);
+    sourceCell.innerHTML = `<span class="location-source ${sourceClass}">${sourceName}</span>`;
     
     // Browser & Device
     const browserCell = row.insertCell();
@@ -134,20 +134,11 @@ export function createLocationRow(data, locationKey, onRequestLocation, onDelete
     browserSpan.setAttribute('title', createBrowserInfo(data));
     browserCell.appendChild(browserSpan);
     
-    // System Info
-    const systemCell = row.insertCell();
-    const systemSpan = document.createElement('span');
-    systemSpan.className = 'truncate';
-    systemSpan.textContent = `${data.device?.memory}GB RAM, ${data.device?.cores} cores`;
-    systemSpan.setAttribute('title', createSystemInfo(data));
-    systemCell.appendChild(systemSpan);
-    
     // Actions
     const actionsCell = row.insertCell();
     
-    // Location request button
     const locationBtn = document.createElement('button');
-    locationBtn.textContent = 'Request Location';
+    locationBtn.textContent = 'Request';
     locationBtn.className = 'location-btn';
     locationBtn.onclick = (e) => {
         e.stopPropagation();
@@ -155,7 +146,6 @@ export function createLocationRow(data, locationKey, onRequestLocation, onDelete
     };
     actionsCell.appendChild(locationBtn);
     
-    // Delete button
     const deleteBtn = document.createElement('button');
     deleteBtn.textContent = 'Delete';
     deleteBtn.className = 'delete-btn';
@@ -166,6 +156,22 @@ export function createLocationRow(data, locationKey, onRequestLocation, onDelete
     actionsCell.appendChild(deleteBtn);
     
     return row;
+}
+
+function getAccuracyClass(accuracy) {
+    if (!accuracy) return '';
+    if (accuracy < 50) return 'accuracy-excellent';
+    if (accuracy < 200) return 'accuracy-good';
+    if (accuracy < 1000) return 'accuracy-fair';
+    return 'accuracy-poor';
+}
+
+function getSourceClass(source) {
+    const s = source.toLowerCase();
+    if (s.includes('gps')) return 'gps';
+    if (s.includes('wifi')) return 'wifi';
+    if (s.includes('cell')) return 'cell';
+    return 'ip';
 }
 
 // Create marker popup content

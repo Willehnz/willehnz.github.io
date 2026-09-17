@@ -1,330 +1,410 @@
 import * as DataManager from './data-manager.js';
 import * as MapHandler from './map-handler.js';
 import * as UIUtils from './ui-utils.js';
+import { sendLocationNotification } from './discord.js';
+import { logger } from '../../utils/logger.js';
 
 let autoRefreshInterval;
 let timerInterval;
-const REFRESH_INTERVAL = 30; // seconds
+let realtimeListener = null;
+const REFRESH_INTERVAL = 30;
+
+// State
+let allLocations = [];
+let filteredLocations = [];
+let currentPage = 1;
+const PAGE_SIZE = 25;
+let sortColumn = 'timestamp';
+let sortDirection = 'desc';
+let searchQuery = '';
 
 // Initialize admin panel
 export async function initializeAdmin() {
     try {
-        // Initialize map first
         MapHandler.initMap();
-        console.log('Map initialized');
+        logger.debug('Map initialized');
         
-        // Load initial data
         await refreshData();
-        console.log('Initial data loaded');
-        
-        // Load current theme
-        const activeTheme = await DataManager.getCurrentTheme();
-        const themeSelect = document.getElementById('themeSelect');
-        if (themeSelect) {
-            themeSelect.value = activeTheme;
-        }
-        
-        // Setup event listeners
+        setupRealtimeListener();
         setupEventListeners();
+        updateStats();
         
+        logger.info('Admin panel initialized');
     } catch (error) {
-        console.error('Failed to initialize admin panel:', error);
+        logger.error('Failed to initialize admin panel:', error);
         UIUtils.showError('Failed to initialize admin panel. Please refresh the page.');
     }
 }
 
+// Setup real-time Firebase listener
+function setupRealtimeListener() {
+    if (!window.database) return;
+    
+    const locationsRef = window.database.ref('locations');
+    realtimeListener = locationsRef.orderByChild('timestamp').limitToLast(200);
+    
+    realtimeListener.on('child_added', (snapshot) => {
+        const location = { key: snapshot.key, ...snapshot.val() };
+        
+        // Check if already exists
+        const existingIndex = allLocations.findIndex(l => l.key === location.key);
+        if (existingIndex === -1) {
+            allLocations.unshift(location);
+            applyFiltersAndRender();
+            updateStats();
+            
+            // Send Discord notification
+            sendLocationNotification(location);
+            
+            // Animate new row
+            const newRow = document.querySelector(`tr[data-key="${location.key}"]`);
+            if (newRow) newRow.classList.add('new-location');
+            
+            logger.debug('New location received:', location.key);
+        }
+    });
+    
+    realtimeListener.on('child_changed', (snapshot) => {
+        const location = { key: snapshot.key, ...snapshot.val() };
+        const index = allLocations.findIndex(l => l.key === location.key);
+        if (index !== -1) {
+            allLocations[index] = location;
+            applyFiltersAndRender();
+            updateStats();
+        }
+    });
+    
+    realtimeListener.on('child_removed', (snapshot) => {
+        allLocations = allLocations.filter(l => l.key !== snapshot.key);
+        applyFiltersAndRender();
+        updateStats();
+    });
+}
+
 // Setup event listeners
 function setupEventListeners() {
-    // Auto-refresh checkbox with timer
+    // Refresh button
+    const refreshBtn = document.getElementById('refreshDataBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => refreshData());
+    }
+    
+    // Auto-refresh
     const autoRefreshCheckbox = document.getElementById('autoRefresh');
     const refreshTimer = document.getElementById('refreshTimer');
     
     if (autoRefreshCheckbox) {
         autoRefreshCheckbox.addEventListener('change', (e) => {
             if (e.target.checked) {
-                // Start auto-refresh
                 let timeLeft = REFRESH_INTERVAL;
                 refreshTimer.textContent = `(${timeLeft}s)`;
                 
-                // Set up refresh interval
                 autoRefreshInterval = setInterval(() => {
                     refreshData();
-                    timeLeft = REFRESH_INTERVAL; // Reset timer after refresh
+                    timeLeft = REFRESH_INTERVAL;
                     refreshTimer.textContent = `(${timeLeft}s)`;
                 }, REFRESH_INTERVAL * 1000);
                 
-                // Set up timer countdown
                 timerInterval = setInterval(() => {
                     timeLeft--;
                     refreshTimer.textContent = `(${timeLeft}s)`;
                 }, 1000);
             } else {
-                // Clear intervals and timer display
                 clearInterval(autoRefreshInterval);
                 clearInterval(timerInterval);
                 refreshTimer.textContent = '';
             }
         });
     }
-
-    // Theme select with enhanced feedback
-    const themeSelect = document.getElementById('themeSelect');
-    if (themeSelect) {
-        themeSelect.addEventListener('change', async (e) => {
-            const newTheme = e.target.value;
-            const themeName = window.themes[newTheme].name;
-            
-            // Create custom confirmation dialog
-            const confirmDialog = document.createElement('div');
-            confirmDialog.className = 'theme-confirm-dialog';
-            confirmDialog.innerHTML = `
-                <div class="theme-confirm-content">
-                    <h3>Change Theme</h3>
-                    <p>Are you sure you want to change the theme to ${themeName}?</p>
-                    <p class="theme-confirm-note">This will update the appearance for all users.</p>
-                    <div class="theme-confirm-buttons">
-                        <button class="confirm-yes">Yes, Change Theme</button>
-                        <button class="confirm-no">Cancel</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(confirmDialog);
-
-            // Handle confirmation
-            try {
-                const confirmed = await new Promise((resolve, reject) => {
-                    const yesBtn = confirmDialog.querySelector('.confirm-yes');
-                    const noBtn = confirmDialog.querySelector('.confirm-no');
-                    
-                    yesBtn.addEventListener('click', () => {
-                        resolve(true);
-                    });
-                    
-                    noBtn.addEventListener('click', () => {
-                        resolve(false);
-                    });
-
-                    // Also handle clicking outside the dialog
-                    confirmDialog.addEventListener('click', (e) => {
-                        if (e.target === confirmDialog) {
-                            resolve(false);
-                        }
-                    });
-                });
-
-                // Remove dialog
-                document.body.removeChild(confirmDialog);
-
-                // If confirmed, update theme
-                if (confirmed) {
-                    await updateTheme(newTheme);
-                } else {
-                    // Reset select to current theme if cancelled
-                    const currentTheme = await DataManager.getCurrentTheme();
-                    themeSelect.value = currentTheme;
-                }
-            } catch (error) {
-                // Clean up on error
-                if (document.body.contains(confirmDialog)) {
-                    document.body.removeChild(confirmDialog);
-                }
-                console.error('Error in theme change dialog:', error);
-                // Reset select to current theme
-                const currentTheme = await DataManager.getCurrentTheme();
-                themeSelect.value = currentTheme;
+    
+    // Search
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase();
+            currentPage = 1;
+            applyFiltersAndRender();
+        });
+    }
+    
+    // Sort headers
+    document.querySelectorAll('.logs th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+            const column = th.dataset.sort;
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
             }
+            updateSortIndicators();
+            applyFiltersAndRender();
+        });
+    });
+    
+    // Export buttons
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    if (exportCsvBtn) exportCsvBtn.addEventListener('click', () => exportData('csv'));
+    
+    const exportJsonBtn = document.getElementById('exportJsonBtn');
+    if (exportJsonBtn) exportJsonBtn.addEventListener('click', () => exportData('json'));
+    
+    // Test Discord button
+    const testDiscordBtn = document.getElementById('testDiscordBtn');
+    if (testDiscordBtn) {
+        testDiscordBtn.addEventListener('click', async () => {
+            testDiscordBtn.disabled = true;
+            testDiscordBtn.textContent = '⏳ Sending...';
+            const { sendTestNotification } = await import('./discord.js');
+            const success = await sendTestNotification();
+            testDiscordBtn.disabled = false;
+            testDiscordBtn.textContent = '💬 Test Discord';
+            UIUtils.showToast(
+                success ? 'Test notification sent! Check your Discord.' : 'Failed to send notification.',
+                success ? 'success' : 'error'
+            );
         });
     }
 }
 
-// Refresh data
+// Refresh data from Firebase
 export async function refreshData() {
     try {
-        console.log('Refreshing data...');
-        MapHandler.clearMarkers();
-        const locations = await DataManager.fetchLocations();
-        console.log('Fetched locations:', locations);
-        
-        const logsTable = document.getElementById('logsTable');
-        if (!logsTable) {
-            console.error('Logs table not found');
-            return;
-        }
-        logsTable.innerHTML = '';
-        
-        let latestLocation = null;
-        
-        locations.forEach(data => {
-            if (!latestLocation || new Date(data.timestamp) > new Date(latestLocation.timestamp)) {
-                latestLocation = data;
-            }
-            
-            // Add marker to map with full location data
-            console.log('Adding marker:', data.latitude, data.longitude);
-            const marker = MapHandler.addMarker(
-                data.latitude, 
-                data.longitude,
-                data
-            );
-            
-            // Create table row
-            const row = UIUtils.createLocationRow(
-                data,
-                data.key,
-                async (locationBtn) => {
-                    await requestLocationUpdate(data.key, data, locationBtn, marker);
-                },
-                async () => {
-                    if (confirm('Are you sure you want to delete this location record?')) {
-                        try {
-                            await DataManager.deleteLocation(data.key);
-                            row.remove();
-                            MapHandler.removeMarker(data.latitude, data.longitude);
-                            UIUtils.showToast('Location deleted successfully', 'success');
-                        } catch (error) {
-                            UIUtils.showError('Error deleting record. Please try again.');
-                        }
-                    }
-                }
-            );
-            
-            // Add row click handler
-            row.addEventListener('click', () => {
-                document.querySelectorAll('.logs tr').forEach(r => r.classList.remove('selected'));
-                row.classList.add('selected');
-                MapHandler.focusLocation(data.latitude, data.longitude, true);
-            });
-            
-            logsTable.appendChild(row);
-        });
-        
-        // Focus on latest location
-        if (latestLocation) {
-            console.log('Focusing on latest location:', latestLocation.latitude, latestLocation.longitude);
-            MapHandler.focusLocation(latestLocation.latitude, latestLocation.longitude);
-        }
-        
+        allLocations = await DataManager.fetchLocations();
+        applyFiltersAndRender();
+        updateStats();
+        logger.debug('Data refreshed');
     } catch (error) {
-        console.error('Error refreshing data:', error);
-        UIUtils.showError('Error fetching data. Please try again.');
+        logger.error('Error refreshing data:', error);
+        UIUtils.showError('Failed to refresh data');
     }
 }
 
-// Update theme with enhanced feedback
-async function updateTheme(themeName) {
-    const themeSelect = document.getElementById('themeSelect');
-    const loadingToast = UIUtils.showToast('Updating theme...', 'info', false);
+// Apply search filter, sort, and render
+function applyFiltersAndRender() {
+    filteredLocations = allLocations.filter(loc => {
+        if (!searchQuery) return true;
+        const searchStr = [loc.firstName, loc.lastName, loc.phone, loc.ip, loc.locationSource, loc.browser?.name]
+            .filter(Boolean).join(' ').toLowerCase();
+        return searchStr.includes(searchQuery);
+    });
     
-    try {
-        // Add loading state
-        if (themeSelect) {
-            themeSelect.disabled = true;
+    filteredLocations.sort((a, b) => {
+        let aVal = a[sortColumn], bVal = b[sortColumn];
+        if (sortColumn === 'timestamp') { aVal = new Date(aVal || 0).getTime(); bVal = new Date(bVal || 0).getTime(); }
+        else if (sortColumn === 'accuracy') { aVal = parseFloat(aVal) || 99999; bVal = parseFloat(bVal) || 99999; }
+        else if (typeof aVal === 'string') { aVal = (aVal || '').toLowerCase(); bVal = (bVal || '').toLowerCase(); }
+        if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    renderTable();
+    renderPagination();
+    renderMap();
+}
+
+function updateSortIndicators() {
+    document.querySelectorAll('.logs th.sortable').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.sort === sortColumn) th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+    });
+}
+
+function renderTable() {
+    const tbody = document.getElementById('logsTable');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const pageData = filteredLocations.slice(start, end);
+    
+    pageData.forEach(data => {
+        const row = UIUtils.createLocationRow(
+            data, data.key,
+            (btn) => requestLocationUpdate(data.key, data, btn),
+            () => deleteLocation(data.key),
+            () => focusOnMap(data)
+        );
+        row.dataset.key = data.key;
+        row.addEventListener('click', () => focusOnMap(data));
+        tbody.appendChild(row);
+    });
+}
+
+function renderPagination() {
+    const totalPages = Math.ceil(filteredLocations.length / PAGE_SIZE) || 1;
+    const info = document.getElementById('paginationInfo');
+    const controls = document.getElementById('paginationControls');
+    
+    if (info) {
+        const start = (currentPage - 1) * PAGE_SIZE + 1;
+        const end = Math.min(currentPage * PAGE_SIZE, filteredLocations.length);
+        info.textContent = filteredLocations.length > 0 ? `Showing ${start}-${end} of ${filteredLocations.length}` : 'No results';
+    }
+    
+    if (controls) {
+        controls.innerHTML = '';
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'pagination-btn';
+        prevBtn.textContent = '← Prev';
+        prevBtn.disabled = currentPage <= 1;
+        prevBtn.addEventListener('click', () => { currentPage--; renderTable(); renderPagination(); });
+        controls.appendChild(prevBtn);
+        
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            const btn = document.createElement('button');
+            btn.className = `pagination-btn ${i === currentPage ? 'active' : ''}`;
+            btn.textContent = i;
+            btn.addEventListener('click', () => { currentPage = i; renderTable(); renderPagination(); });
+            controls.appendChild(btn);
         }
         
-        // Update theme in database
-        await DataManager.updateTheme(themeName);
-        
-        // Listen for theme change event
-        const themeChangePromise = new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                window.removeEventListener('themeChanged', handler);
-                reject(new Error('Theme change timed out'));
-            }, 5000);
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'pagination-btn';
+        nextBtn.textContent = 'Next →';
+        nextBtn.disabled = currentPage >= totalPages;
+        nextBtn.addEventListener('click', () => { currentPage++; renderTable(); renderPagination(); });
+        controls.appendChild(nextBtn);
+    }
 
-            const handler = (event) => {
-                clearTimeout(timeout);
-                window.removeEventListener('themeChanged', handler);
-                if (event.detail.success) {
-                    resolve();
-                } else {
-                    reject(new Error(event.detail.error || 'Theme change failed'));
-                }
-            };
-
-            window.addEventListener('themeChanged', handler);
-        });
-
-        // Wait for theme change to complete
-        await themeChangePromise;
-        
-        // Show success message
-        loadingToast.remove();
-        UIUtils.showToast(`Theme successfully updated to ${window.themes[themeName].name}`, 'success');
-        
-    } catch (error) {
-        console.error('Error updating theme:', error);
-        loadingToast.remove();
-        UIUtils.showToast('Error updating theme: ' + error.message, 'error');
-        
-        // Reset select to current theme on error
-        const currentTheme = await DataManager.getCurrentTheme();
-        if (themeSelect) {
-            themeSelect.value = currentTheme;
-        }
-    } finally {
-        // Re-enable select
-        if (themeSelect) {
-            themeSelect.disabled = false;
+function renderMap() {
+    MapHandler.clearMarkers();
+    filteredLocations.forEach(data => {
+        if (data.latitude && data.longitude) MapHandler.addMarker(data.latitude, data.longitude, data);
+    });
+    
+    if (filteredLocations.length > 0) {
+        const map = MapHandler.getMap();
+        const valid = filteredLocations.filter(l => l.latitude && l.longitude);
+        if (map && valid.length > 0) {
+            const bounds = L.latLngBounds(valid.map(l => [l.latitude, l.longitude]));
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
         }
     }
 }
 
-// Request location update
-async function requestLocationUpdate(locationKey, currentData, locationBtn, currentMarker) {
+function focusOnMap(data) {
+    if (data.latitude && data.longitude) MapHandler.focusLocation(data.latitude, data.longitude, true);
+}
+
+function updateStats() {
+    const totalEl = document.getElementById('statTotalLocations');
+    const activeEl = document.getElementById('statActiveSessions');
+    const accuracyEl = document.getElementById('statAvgAccuracy');
+    const themeEl = document.getElementById('statActiveTheme');
+    const recentEl = document.getElementById('statLastLocation');
+    
+    if (totalEl) totalEl.textContent = allLocations.length;
+    if (activeEl) activeEl.textContent = allLocations.filter(l => l.status === 'active').length;
+    
+    if (accuracyEl) {
+        const accs = allLocations.map(l => parseFloat(l.accuracy)).filter(a => !isNaN(a));
+        accuracyEl.textContent = accs.length > 0 ? `±${Math.round(accs.reduce((a, b) => a + b, 0) / accs.length)}m` : '--';
+    }
+    
+    if (themeEl) {
+        DataManager.getCurrentTheme().then(theme => {
+            themeEl.textContent = window.themes[theme]?.name || theme;
+        });
+    }
+    
+    if (recentEl && allLocations.length > 0) {
+        const sorted = [...allLocations].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+        const diff = Date.now() - new Date(sorted[0].timestamp).getTime();
+        const mins = Math.floor(diff / 60000);
+        const hrs = Math.floor(mins / 60);
+        if (mins < 1) recentEl.textContent = 'Just now';
+        else if (mins < 60) recentEl.textContent = `${mins}m ago`;
+        else if (hrs < 24) recentEl.textContent = `${hrs}h ago`;
+        else recentEl.textContent = `${Math.floor(hrs / 24)}d ago`;
+    }
+}
+
+function exportData(format) {
+    const data = filteredLocations.length > 0 ? filteredLocations : allLocations;
+    
+    if (format === 'json') {
+        downloadFile(JSON.stringify(data, null, 2), 'locations.json', 'application/json');
+    } else if (format === 'csv') {
+        const headers = ['firstName', 'lastName', 'phone', 'timestamp', 'ip', 'latitude', 'longitude', 'accuracy', 'locationSource', 'status'];
+        const rows = [headers.join(',')];
+        data.forEach(loc => {
+            const row = headers.map(h => {
+                const val = loc[h] === undefined || loc[h] === null ? '' : String(loc[h]);
+                return `"${val.replace(/"/g, '""')}"`;
+            });
+            rows.push(row.join(','));
+        });
+        downloadFile(rows.join('\n'), 'locations.csv', 'text/csv');
+    }
+    
+    UIUtils.showToast(`Exported ${data.length} locations as ${format.toUpperCase()}`, 'success');
+}
+
+function downloadFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+async function deleteLocation(locationKey) {
+    if (!confirm('Are you sure you want to delete this location?')) return;
+    try {
+        await DataManager.deleteLocation(locationKey);
+        allLocations = allLocations.filter(l => l.key !== locationKey);
+        applyFiltersAndRender();
+        updateStats();
+        UIUtils.showToast('Location deleted', 'success');
+    } catch (error) {
+        logger.error('Error deleting location:', error);
+        UIUtils.showToast('Error deleting location', 'error');
+    }
+}
+
+async function requestLocationUpdate(locationKey, currentData, locationBtn) {
     locationBtn.disabled = true;
     locationBtn.textContent = 'Requesting...';
-
+    
     try {
         const requestRef = await DataManager.requestLocationUpdate(locationKey);
-
-        // Listen for updates to this request
         requestRef.on('value', async (snapshot) => {
             const request = snapshot.val();
             if (!request) return;
-
             if (request.status === 'completed' && request.newLocation) {
-                // Update the marker on the map
                 MapHandler.removeMarker(currentData.latitude, currentData.longitude);
-                
-                const newMarker = MapHandler.addMarker(
-                    request.newLocation.latitude,
-                    request.newLocation.longitude,
-                    {
-                        ...currentData,
-                        ...request.newLocation,
-                        timestamp: new Date().toISOString()
-                    }
-                );
-                
+                MapHandler.addMarker(request.newLocation.latitude, request.newLocation.longitude, { ...currentData, ...request.newLocation });
                 MapHandler.focusLocation(request.newLocation.latitude, request.newLocation.longitude);
-                
-                UIUtils.showToast('Location updated successfully', 'success');
+                UIUtils.showToast('Location updated', 'success');
                 requestRef.off('value');
-                refreshData(); // Refresh the table
+                refreshData();
             } else if (request.status === 'failed') {
-                // Show specific error message from location tracker
-                UIUtils.showToast(request.error || 'Failed to update location', 'error');
+                UIUtils.showToast(request.error || 'Failed to update', 'error');
                 requestRef.off('value');
             }
-
             locationBtn.disabled = false;
             locationBtn.textContent = 'Request Location';
         });
-
-        // Set a timeout to stop listening after 30 seconds
         setTimeout(() => {
             requestRef.off('value');
-            if (locationBtn) {
-                locationBtn.disabled = false;
-                locationBtn.textContent = 'Request Location';
-            }
-            UIUtils.showToast('Location request timed out', 'error');
+            locationBtn.disabled = false;
+            locationBtn.textContent = 'Request Location';
         }, 30000);
-
     } catch (error) {
-        console.error('Error requesting location update:', error);
-        UIUtils.showToast('Error requesting location update', 'error');
+        logger.error('Error requesting location:', error);
         locationBtn.disabled = false;
         locationBtn.textContent = 'Request Location';
     }
+}
 }

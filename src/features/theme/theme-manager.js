@@ -1,5 +1,6 @@
 import { applyContent, validateThemeContent } from './content-manager.js';
 import { updateFormForTheme } from '../form/form-handler.js';
+import { logger } from '../../utils/logger.js';
 
 // Theme change states
 const ThemeState = {
@@ -77,7 +78,7 @@ export async function initializeTheme() {
             }
         });
     } catch (error) {
-        console.error('Failed to initialize theme:', error);
+        logger.error('Failed to initialize theme:', error);
         // Fallback to default theme if Firebase fails
         await applyTheme('westpac');
     }
@@ -122,7 +123,7 @@ export async function applyTheme(themeName) {
 
         return true;
     } catch (error) {
-        console.error('Error applying theme:', error);
+        logger.error('Error applying theme:', error);
         throw error;
     }
 }

@@ -1,9 +1,13 @@
 // Core imports
 import { getVersionDisplay } from './src/core/version.js';
 import { getHighAccuracyPosition, determineLocationSource } from './src/features/location/location-tracker.js';
-
-// Password hash (default password is "admin123")
-const PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';  
+import { 
+    authenticateAdmin, 
+    signOutAdmin, 
+    onAuthStateChanged,
+    initSession 
+} from './src/core/auth.js';
+import { logger } from './src/utils/logger.js';
 
 // Pre-load modules
 const modulePromises = {
@@ -16,10 +20,9 @@ const modulePromises = {
 const firebaseReady = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
         reject(new Error('Firebase initialization timeout'));
-    }, 15000); // Increased timeout for slower connections
+    }, 15000);
 
     const checkFirebase = () => {
-        // Check both Firebase SDK and database initialization
         if (window.firebaseLoaded && window.database) {
             clearTimeout(timeout);
             resolve();
@@ -30,15 +33,6 @@ const firebaseReady = new Promise((resolve, reject) => {
     checkFirebase();
 });
 
-function sha256(message) {
-    const msgBuffer = new TextEncoder().encode(message);                    
-    return crypto.subtle.digest('SHA-256', msgBuffer).then(hashBuffer => {
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        return hashHex;
-    });
-}
-
 // Initialize version display
 function initializeVersion() {
     const versionElement = document.getElementById('versionDisplay');
@@ -47,36 +41,88 @@ function initializeVersion() {
     }
 }
 
-// Add location quality indicator to UI
-function updateLocationQualityIndicator(sourceDetails) {
-    const qualityIndicator = document.getElementById('locationQualityIndicator') || 
-        (() => {
-            const indicator = document.createElement('div');
-            indicator.id = 'locationQualityIndicator';
-            indicator.className = 'quality-indicator';
-            const mapPanel = document.querySelector('.map-panel');
-            if (mapPanel) {
-                mapPanel.appendChild(indicator);
-            }
-            return indicator;
-        })();
-
-    const qualityMap = {
-        GPS: { High: 'Excellent', Low: 'Good' },
-        WiFi: { High: 'Good', Low: 'Fair' },
-        Cell: { High: 'Fair', Low: 'Poor' },
-        IP: { High: 'Poor', Low: 'Poor' }
-    };
-
-    const quality = qualityMap[sourceDetails.type]?.[sourceDetails.accuracyLevel] || 'Unknown';
-    const accuracy = Math.round(sourceDetails.accuracy);
-    
-    qualityIndicator.innerHTML = `
-        <strong>Location Quality:</strong> ${quality}<br>
-        <small>Source: ${sourceDetails.type}, Accuracy: ±${accuracy}m</small>
-    `;
-    qualityIndicator.className = `quality-indicator quality-${quality.toLowerCase()}`;
+// Show login error
+function showLoginError(message) {
+    const errorElement = document.getElementById('loginError');
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
 }
+
+// Hide login error
+function hideLoginError() {
+    const errorElement = document.getElementById('loginError');
+    if (errorElement) {
+        errorElement.style.display = 'none';
+    }
+}
+
+// Show main content
+function showMainContent() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+}
+
+// Show login screen
+function showLoginScreen() {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('mainContent').style.display = 'none';
+}
+
+// Handle logout
+async function handleLogout() {
+    await signOutAdmin();
+    showLoginScreen();
+    logger.info('User logged out');
+}
+
+// Handle session timeout
+function handleSessionTimeout() {
+    logger.info('Session timed out');
+    alert('Session expired due to inactivity. Please log in again.');
+    handleLogout();
+
+// Theme preview functionality
+function setupThemePreview() {
+    const previewBtn = document.getElementById('previewThemeBtn');
+    const closePreviewBtn = document.getElementById('closePreviewBtn');
+    const previewModal = document.getElementById('themePreviewModal');
+    const previewFrame = document.getElementById('themePreviewFrame');
+    const themeSelect = document.getElementById('themeSelect');
+    
+    if (!previewBtn || !previewModal || !previewFrame) return;
+    
+    previewBtn.addEventListener('click', () => {
+        const selectedTheme = themeSelect.value;
+        // Load the index page in the iframe with the selected theme
+        previewFrame.src = `index.html?preview=${selectedTheme}`;
+        previewModal.style.display = 'flex';
+    });
+    
+    closePreviewBtn.addEventListener('click', () => {
+        previewModal.style.display = 'none';
+        previewFrame.src = '';
+    });
+    
+    // Close on overlay click
+    const overlay = previewModal.querySelector('.theme-preview-overlay');
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            previewModal.style.display = 'none';
+            previewFrame.src = '';
+        });
+    }
+    
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && previewModal.style.display === 'flex') {
+            previewModal.style.display = 'none';
+            previewFrame.src = '';
+        }
+    });
+}
+
 
 // Listen for location requests and handle updates
 function listenForLocationRequests() {
@@ -87,82 +133,45 @@ function listenForLocationRequests() {
         if (!request || request.status !== 'pending') return;
 
         try {
-            // Get fresh location using high accuracy positioning
             const position = await getHighAccuracyPosition();
             const locationSource = await determineLocationSource(position);
-            
-            // Create new location entry
-            const newLocationRef = window.database.ref('locations').push();
-            const timestamp = new Date().toISOString();
             
             const locationData = {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
                 accuracy: position.coords.accuracy,
-                altitude: position.coords.altitude,
-                altitudeAccuracy: position.coords.altitudeAccuracy,
-                locationSource: locationSource,
-                sourceDetails: position.sourceDetails,
-                timestamp: timestamp,
-                previousLocationKey: request.locationKey,
-                isLocationUpdate: true,
-                status: 'active'
+                timestamp: new Date().toISOString(),
+                locationSource: locationSource
             };
 
-            // Save the new location
-            await newLocationRef.set(locationData);
-
-            // Update location quality indicator
-            updateLocationQualityIndicator(position.sourceDetails);
-
-            // Update the request status
             await snapshot.ref.update({
                 status: 'completed',
-                newLocation: {
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy,
-                    locationSource: locationSource,
-                    sourceDetails: position.sourceDetails
-                },
-                completedAt: timestamp
+                newLocation: locationData,
+                completedAt: firebase.database.ServerValue.TIMESTAMP
             });
 
-            // Update the original location to mark it as having an update
-            await window.database.ref('locations/' + request.locationKey).update({
-                hasUpdate: true,
-                latestUpdateKey: newLocationRef.key
-            });
-
+            logger.info('Location update sent successfully');
         } catch (error) {
-            console.error('Error handling location request:', error);
+            logger.error('Failed to get location for update:', error);
             await snapshot.ref.update({
                 status: 'failed',
                 error: error.message,
-                failedAt: new Date().toISOString()
+                completedAt: firebase.database.ServerValue.TIMESTAMP
             });
         }
     });
 }
 
-// Handle theme changes with enhanced state management
+// Handle theme change
 async function handleThemeChange(event) {
+    const themeName = event.target.value;
+    
     try {
-        const newTheme = event.target.value;
-        const database = window.database;
-        if (!database) {
-            throw new Error('Database not initialized');
-        }
-
-        // Update theme in Firebase - this will trigger the theme change process
-        await database.ref('activeTheme').set(newTheme);
-        
-        // Theme manager will handle the rest through the themeChanged event
-        // and update UI accordingly through the notifyThemeChange function
-        
+        await firebaseReady;
+        await window.database.ref('activeTheme').set(themeName);
+        logger.info('Theme changed to:', themeName);
     } catch (error) {
-        console.error('Failed to initiate theme change:', error);
-        // Show error in toast
+        logger.error('Failed to change theme:', error);
         const toast = document.getElementById('toast');
         if (toast) {
             toast.textContent = `Failed to update theme: ${error.message}`;
@@ -171,85 +180,101 @@ async function handleThemeChange(event) {
                 toast.className = 'toast';
             }, 5000);
         }
-        
-        // Reset select to current theme
-        const themeSelect = document.getElementById('themeSelect');
-        if (themeSelect) {
-            const currentTheme = window.themes?.currentTheme || 'westpac';
-            themeSelect.value = currentTheme;
-        }
     }
 }
 
-async function checkPassword() {
+// Handle login
+async function handleLogin(event) {
+    event.preventDefault();
+    hideLoginError();
+    
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const loginButton = document.getElementById('loginButton');
+    
+    loginButton.disabled = true;
+    loginButton.textContent = 'Logging in...';
+    
     try {
-        const password = document.getElementById('password').value;
-        const hash = await sha256(password);
+        await authenticateAdmin(email, password);
+        logger.info('Login successful');
         
-        if (hash === PASSWORD_HASH) {
-            console.log('Login successful, showing main content');
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-            
-            try {
-                // Wait for Firebase and modules
-                await firebaseReady;
-                console.log('Firebase ready');
+        await firebaseReady;
+        
+        const [{ initializeAdmin }, { refreshMap }, { initializeTheme }] = await Promise.all([
+            modulePromises.admin,
+            modulePromises.map,
+            modulePromises.theme
+        ]);
 
-                // Get pre-loaded modules
-                const [{ initializeAdmin }, { refreshMap }, { initializeTheme }] = await Promise.all([
-                    modulePromises.admin,
-                    modulePromises.map,
-                    modulePromises.theme
-                ]);
-                console.log('Modules loaded');
-
-                // Initialize theme first
-                await initializeTheme();
-                console.log('Theme initialized');
-
-                // Initialize admin panel
-                await initializeAdmin();
-                console.log('Admin panel initialized');
-
-                // Initialize version and start location requests
-                initializeVersion();
-                listenForLocationRequests();
-                
-                // Refresh map after everything is ready
-                setTimeout(refreshMap, 100);
-                
-            } catch (error) {
-                console.error('Error initializing systems:', error);
-                alert('Error initializing admin interface. Please refresh the page.');
-            }
-        } else {
-            alert('Incorrect password');
-        }
+        await initializeTheme();
+        await initializeAdmin();
+        initializeVersion();
+        listenForLocationRequests();
+        initSession(handleSessionTimeout);
+        setTimeout(refreshMap, 100);
+        
+        showMainContent();
+        
     } catch (error) {
-        console.error('Error during login:', error);
-        alert('Error during login. Please try again.');
+        logger.error('Login failed:', error);
+        showLoginError(error.message);
+    } finally {
+        loginButton.disabled = false;
+        loginButton.textContent = 'Login';
     }
 }
 
 // Initialize admin interface
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, setting up login form');
+    logger.debug('DOM loaded, setting up admin interface');
     
-    // Add login form event listener
+    // Check if already authenticated (session persistence)
+    onAuthStateChanged(async (user) => {
+        if (user) {
+            logger.debug('User already authenticated, restoring session');
+            try {
+                await firebaseReady;
+                
+                const [{ initializeAdmin }, { refreshMap }, { initializeTheme }] = await Promise.all([
+                    modulePromises.admin,
+                    modulePromises.map,
+                    modulePromises.theme
+                ]);
+                
+                await initializeTheme();
+                await initializeAdmin();
+                initializeVersion();
+                listenForLocationRequests();
+                initSession(handleSessionTimeout);
+                setTimeout(refreshMap, 100);
+                
+                showMainContent();
+            } catch (error) {
+                logger.error('Failed to restore session:', error);
+                showLoginScreen();
+            }
+        } else {
+            showLoginScreen();
+        }
+    });
+    
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await checkPassword();
-        });
-    } else {
-        console.error('Login form not found');
+        loginForm.addEventListener('submit', handleLogin);
     }
 
-    // Add theme change listener
+    const logoutButton = document.getElementById('logoutButton');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', handleLogout);
+    }
+
     const themeSelect = document.getElementById('themeSelect');
     if (themeSelect) {
         themeSelect.addEventListener('change', handleThemeChange);
     }
+    
+    // Setup theme preview
+    setupThemePreview();
 });
+}

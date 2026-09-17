@@ -1,0 +1,24 @@
+/* ============================================
+   INLAND REVENUE THEME
+   ============================================ */
+
+:root {
+    --primary-color: #00457C;
+    --primary-hover: #003366;
+    --primary-color-rgb: 0, 69, 124;
+    --bg-color: #F5F7FA;
+    --card-bg: white;
+    --text-color: #333;
+    --text-muted: #555;
+    --border-color: #D1D5DB;
+    --badge-bg: #EBF5FF;
+    --info-bg: #EBF5FF;
+    --info-border: #B3D4FC;
+    --header-bg: white;
+    --logo-height: 45px;
+    --logo-padding: 20px;
+    --logo-min-height: auto;
+    --button-width: 220px;
+    --badge-border: #B3D4FC;
+    --info-list-style: inside;
+}
