@@ -79,8 +79,15 @@ export async function initializeTheme() {
         });
     } catch (error) {
         logger.error('Failed to initialize theme:', error);
+        // Always show the page, even if theme loading fails
+        const container = document.querySelector('.container');
+        if (container) container.style.opacity = '1';
         // Fallback to default theme if Firebase fails
-        await applyTheme('westpac');
+        try {
+            await applyTheme('westpac');
+        } catch (e) {
+            logger.error('Fallback theme also failed:', e);
+        }
     }
 }
 
