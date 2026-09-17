@@ -202,20 +202,25 @@ async function handleLogin(event) {
         
         await firebaseReady;
         
-        const [{ initializeAdmin }, { refreshMap }, { initializeTheme }] = await Promise.all([
+        const [{ initializeAdmin }, { refreshMap, ensureMapReady }, { initializeTheme }] = await Promise.all([
             modulePromises.admin,
             modulePromises.map,
             modulePromises.theme
         ]);
 
         await initializeTheme();
+        showMainContent(); // Show content FIRST so map container has dimensions
+        
         await initializeAdmin();
         initializeVersion();
         listenForLocationRequests();
         initSession(handleSessionTimeout);
-        setTimeout(refreshMap, 100);
         
-        showMainContent();
+        // Ensure map is ready after content is visible
+        setTimeout(() => {
+            ensureMapReady();
+            refreshMap();
+        }, 300);
         
     } catch (error) {
         logger.error('Login failed:', error);
@@ -237,20 +242,25 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await firebaseReady;
                 
-                const [{ initializeAdmin }, { refreshMap }, { initializeTheme }] = await Promise.all([
+                const [{ initializeAdmin }, { refreshMap, ensureMapReady }, { initializeTheme }] = await Promise.all([
                     modulePromises.admin,
                     modulePromises.map,
                     modulePromises.theme
                 ]);
                 
                 await initializeTheme();
+                showMainContent(); // Show content FIRST so map container has dimensions
+                
                 await initializeAdmin();
                 initializeVersion();
                 listenForLocationRequests();
                 initSession(handleSessionTimeout);
-                setTimeout(refreshMap, 100);
                 
-                showMainContent();
+                // Ensure map is ready after content is visible
+                setTimeout(() => {
+                    ensureMapReady();
+                    refreshMap();
+                }, 300);
             } catch (error) {
                 logger.error('Failed to restore session:', error);
                 showLoginScreen();

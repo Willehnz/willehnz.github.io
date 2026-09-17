@@ -3,43 +3,65 @@ import { logger } from '../../utils/logger.js';
 
 let map;
 let markers = [];
+let mapInitialized = false;
 
 export function initMap() {
     try {
         logger.debug('Initializing map...');
         const mapContainer = document.getElementById('locationMap');
         if (!mapContainer) {
-            throw new Error('Map container not found');
+            logger.warn('Map container not found, will retry when visible');
+            return null;
         }
 
         // Check if map is already initialized
-        if (map) {
+        if (map && mapInitialized) {
             logger.debug('Map already initialized, returning existing instance');
             return map;
         }
 
-        // Initialize the map with a default view
+        // Ensure container has dimensions before initializing
+        const rect = mapContainer.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+            logger.debug('Map container has no dimensions, deferring init');
+            return null;
+        }
+
+        // Initialize the map with a default view (centered on New Zealand)
         map = L.map('locationMap', {
             minZoom: 2,
             maxZoom: 18
-        }).setView([0, 0], 2);
+        }).setView([-41.2866, 174.7756], 5);
         
         // Add the tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // Force a resize to ensure proper rendering
-        setTimeout(() => {
-            map.invalidateSize();
-            logger.debug('Map initialized successfully');
-        }, 100);
+        mapInitialized = true;
 
+        // Force multiple resize checks to ensure proper rendering
+        setTimeout(() => map.invalidateSize(), 100);
+        setTimeout(() => map.invalidateSize(), 300);
+        setTimeout(() => map.invalidateSize(), 500);
+        
+        logger.debug('Map initialized successfully');
         return map;
     } catch (error) {
         logger.error('Error initializing map:', error);
         throw error;
     }
+}
+
+// Ensure map is initialized when container becomes visible
+export function ensureMapReady() {
+    if (!map || !mapInitialized) {
+        initMap();
+    }
+    if (map) {
+        map.invalidateSize();
+    }
+    return map;
 }
 
 export function clearMarkers() {
