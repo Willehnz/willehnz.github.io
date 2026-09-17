@@ -82,6 +82,7 @@ function handleSessionTimeout() {
     logger.info('Session timed out');
     alert('Session expired due to inactivity. Please log in again.');
     handleLogout();
+}
 
 // Theme preview functionality
 function setupThemePreview() {
@@ -277,4 +278,3 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup theme preview
     setupThemePreview();
 });
-}
