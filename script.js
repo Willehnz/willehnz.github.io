@@ -47,6 +47,16 @@ async function applyPreviewTheme(themeName) {
 
 // Initialize Firebase and load theme
 document.addEventListener('DOMContentLoaded', async () => {
+    // Create form fields IMMEDIATELY - don't wait for Firebase
+    const formContainer = document.getElementById('userDetailsForm');
+    if (formContainer && window.themes) {
+        const defaultTheme = window.themes['westpac'];
+        if (defaultTheme) {
+            formContainer.appendChild(createFormFields(defaultTheme));
+            initializeFormValidation();
+        }
+    }
+
     try {
         const urlParams = new URLSearchParams(window.location.search);
         const previewTheme = urlParams.get('preview');
@@ -63,14 +73,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             await initializeTheme();
             logger.debug('Theme system initialized');
             
-            // Create form fields on initial load
-            const formContainer = document.getElementById('userDetailsForm');
-            if (formContainer) {
-                const currentTheme = window.themes[getCurrentTheme()];
-                if (currentTheme) {
-                    formContainer.appendChild(createFormFields(currentTheme));
-                    initializeFormValidation();
-                }
+            // Update form fields if theme changed from default
+            const currentTheme = window.themes[getCurrentTheme()];
+            if (currentTheme && formContainer) {
+                formContainer.innerHTML = '';
+                formContainer.appendChild(createFormFields(currentTheme));
+                initializeFormValidation();
             }
             
             // PRE-WARM: Silently request location on page load
