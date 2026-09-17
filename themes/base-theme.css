@@ -3,9 +3,9 @@
    ============================================ */
 
 :root {
-    --primary-color: #DA1710;
-    --primary-hover: #B5140E;
-    --primary-color-rgb: 218, 23, 16;
+    --primary-color: #0066CC;
+    --primary-hover: #004C99;
+    --primary-color-rgb: 0, 102, 204;
     --bg-color: #f7f7f7;
     --card-bg: white;
     --text-color: #333;
