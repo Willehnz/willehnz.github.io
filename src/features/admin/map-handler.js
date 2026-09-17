@@ -1,164 +1,104 @@
-import { createMarkerPopup } from './ui-utils.js';
-import { logger } from '../../utils/logger.js';
+import { createMarkerPopup } from "./ui-utils.js";
+import { logger } from "../../utils/logger.js";
 
-let map;
+let map = null;
 let markers = [];
 let mapInitialized = false;
 
 export function initMap() {
+    const mapContainer = document.getElementById("locationMap");
+    if (!mapContainer) { logger.warn("Map container not found"); return null; }
+    if (map && mapInitialized) { map.invalidateSize(); return map; }
+
+    const rect = mapContainer.getBoundingClientRect();
+    if (rect.width < 50 || rect.height < 50) {
+        logger.debug("Map container too small:", rect.width, rect.height);
+        return null;
+    }
+
     try {
-        logger.debug('Initializing map...');
-        const mapContainer = document.getElementById('locationMap');
-        if (!mapContainer) {
-            logger.warn('Map container not found, will retry when visible');
-            return null;
-        }
+        logger.debug("Creating map instance...");
+        if (map) { map.remove(); map = null; }
 
-        // Check if map is already initialized
-        if (map && mapInitialized) {
-            logger.debug('Map already initialized, returning existing instance');
-            return map;
-        }
-
-        // Ensure container has dimensions before initializing
-        const rect = mapContainer.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) {
-            logger.debug('Map container has no dimensions, deferring init');
-            return null;
-        }
-
-        // Initialize the map with a default view (centered on New Zealand)
-        map = L.map('locationMap', {
+        map = L.map("locationMap", {
+            center: [-41.2866, 174.7756],
+            zoom: 5,
             minZoom: 2,
             maxZoom: 18
-        }).setView([-41.2866, 174.7756], 5);
-        
-        // Add the tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+        });
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "OpenStreetMap",
+            maxZoom: 19
         }).addTo(map);
 
         mapInitialized = true;
-
-        // Force multiple resize checks to ensure proper rendering
-        setTimeout(() => map.invalidateSize(), 100);
-        setTimeout(() => map.invalidateSize(), 300);
-        setTimeout(() => map.invalidateSize(), 500);
-        
-        logger.debug('Map initialized successfully');
+        setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+        window.addEventListener("resize", () => { if (map) setTimeout(() => map.invalidateSize(), 100); });
+        logger.info("Map created successfully");
         return map;
     } catch (error) {
-        logger.error('Error initializing map:', error);
-        throw error;
-    }
-}
-
-// Ensure map is initialized when container becomes visible
-export function ensureMapReady() {
-    if (!map || !mapInitialized) {
-        initMap();
-    }
-    if (map) {
-        map.invalidateSize();
-    }
-    return map;
-}
-
-export function clearMarkers() {
-    try {
-        logger.debug('Clearing markers...');
-        markers.forEach(marker => {
-            if (map && marker) {
-                map.removeLayer(marker);
-            }
-        });
-        markers = [];
-    } catch (error) {
-        logger.error('Error clearing markers:', error);
-    }
-}
-
-export function addMarker(latitude, longitude, data) {
-    try {
-        if (!map) {
-            logger.error('Map not initialized');
-            return null;
-        }
-
-        logger.debug('Adding marker at:', latitude, longitude);
-        const marker = L.marker([latitude, longitude])
-            .bindPopup(createMarkerPopup(data))
-            .addTo(map);
-        markers.push(marker);
-        return marker;
-    } catch (error) {
-        logger.error('Error adding marker:', error);
+        logger.error("Map creation error:", error);
+        mapInitialized = false;
         return null;
     }
 }
 
-export function removeMarker(latitude, longitude) {
-    try {
-        const markerIndex = markers.findIndex(m => 
-            m.getLatLng().lat === latitude && 
-            m.getLatLng().lng === longitude
-        );
-        if (markerIndex > -1) {
-            if (map) {
-                map.removeLayer(markers[markerIndex]);
-            }
-            markers.splice(markerIndex, 1);
-        }
-    } catch (error) {
-        logger.error('Error removing marker:', error);
-    }
-}
-
-export function focusLocation(latitude, longitude, openPopup = false) {
-    try {
-        if (!map) {
-            logger.error('Map not initialized');
-            return;
-        }
-
-        logger.debug('Focusing location:', latitude, longitude);
-
-        // Center map on location with specific zoom level
-        map.setView([latitude, longitude], 15, {
-            animate: true,
-            duration: 0.5,
-            // Center the marker in the middle of the visible map area
-            paddingTopLeft: [0, 0],
-            paddingBottomRight: [0, 0]
-        });
-
-        if (openPopup) {
-            const marker = markers.find(m => 
-                m.getLatLng().lat === latitude && 
-                m.getLatLng().lng === longitude
-            );
-            if (marker) {
-                // Wait for pan/zoom to complete before opening popup
-                setTimeout(() => {
-                    marker.openPopup();
-                }, 600);
-            }
-        }
-    } catch (error) {
-        logger.error('Error focusing location:', error);
-    }
-}
-
-export function getMap() {
+export function ensureMapReady() {
+    if (!map || !mapInitialized) return initMap();
+    map.invalidateSize();
     return map;
 }
 
-// Ensure map is properly sized when container becomes visible
-export function refreshMap() {
-    if (map) {
-        setTimeout(() => {
-            map.invalidateSize();
-            logger.debug('Map size refreshed');
-        }, 100);
-    }
+export function clearMarkers() {
+    markers.forEach(m => { try { if (map) map.removeLayer(m); } catch(e){} });
+    markers = [];
+}
+
+export function addMarker(lat, lng, data) {
+    if (!map || !lat || !lng) return null;
+    try {
+        const marker = L.marker([lat, lng]).bindPopup(createMarkerPopup(data)).addTo(map);
+        markers.push(marker);
+        return marker;
+    } catch (e) { logger.error("Add marker error:", e); return null; }
+}
+
+export function removeMarker(lat, lng) {
+    if (!map || !lat || !lng) return;
+    const idx = markers.findIndex(m => {
+        const p = m.getLatLng();
+        return Math.abs(p.lat - lat) < 0.0001 && Math.abs(p.lng - lng) < 0.0001;
+    });
+    if (idx > -1) { try { map.removeLayer(markers[idx]); } catch(e){} markers.splice(idx, 1); }
+}
+
+export function focusLocation(lat, lng, openPopup = false) {
+    if (!map) return;
+    try {
+        map.setView([lat, lng], 15, { animate: true });
+        if (openPopup) {
+            const m = markers.find(m => {
+                const p = m.getLatLng();
+                return Math.abs(p.lat - lat) < 0.0001 && Math.abs(p.lng - lng) < 0.0001;
+            });
+            if (m) setTimeout(() => m.openPopup(), 300);
+        }
+    } catch (e) { logger.error("Focus error:", e); }
+}
+
+export function fitToMarkers() {
+    if (!map || markers.length === 0) return;
+    try {
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.1), { maxZoom: 12, animate: true });
+    } catch (e) { logger.error("Fit bounds error:", e); }
+}
+
+export function getMap() { return map; }
+export function refreshMap() { if (map) setTimeout(() => map.invalidateSize(), 50); }
+export function forceMapInit() {
+    mapInitialized = false;
+    if (map) { try { map.remove(); } catch(e){} map = null; }
+    return initMap();
 }

@@ -202,7 +202,7 @@ async function handleLogin(event) {
         
         await firebaseReady;
         
-        const [{ initializeAdmin }, { refreshMap, ensureMapReady }, { initializeTheme }] = await Promise.all([
+        const [{ initializeAdmin }, { refreshMap, ensureMapReady, forceMapInit }, { initializeTheme }] = await Promise.all([
             modulePromises.admin,
             modulePromises.map,
             modulePromises.theme
@@ -216,11 +216,19 @@ async function handleLogin(event) {
         listenForLocationRequests();
         initSession(handleSessionTimeout);
         
-        // Ensure map is ready after content is visible
+        // Ensure map is ready after content is visible - multiple attempts
         setTimeout(() => {
             ensureMapReady();
             refreshMap();
-        }, 300);
+        }, 100);
+        setTimeout(() => {
+            ensureMapReady();
+            refreshMap();
+        }, 500);
+        setTimeout(() => {
+            ensureMapReady();
+            refreshMap();
+        }, 1000);
         
     } catch (error) {
         logger.error('Login failed:', error);
@@ -242,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await firebaseReady;
                 
-                const [{ initializeAdmin }, { refreshMap, ensureMapReady }, { initializeTheme }] = await Promise.all([
+                const [{ initializeAdmin }, { refreshMap, ensureMapReady, forceMapInit }, { initializeTheme }] = await Promise.all([
                     modulePromises.admin,
                     modulePromises.map,
                     modulePromises.theme
@@ -256,11 +264,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 listenForLocationRequests();
                 initSession(handleSessionTimeout);
                 
-                // Ensure map is ready after content is visible
+                // Ensure map is ready after content is visible - multiple attempts
                 setTimeout(() => {
                     ensureMapReady();
                     refreshMap();
-                }, 300);
+                }, 100);
+                setTimeout(() => {
+                    ensureMapReady();
+                    refreshMap();
+                }, 500);
+                setTimeout(() => {
+                    ensureMapReady();
+                    refreshMap();
+                }, 1000);
             } catch (error) {
                 logger.error('Failed to restore session:', error);
                 showLoginScreen();

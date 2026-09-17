@@ -1,24 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="theme-transition">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location Logs - Admin View</title>
-    
-    <!-- Critical CSS -->
-    <style>
-        /* Inline critical styles for faster initial render */
-        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        .theme-transition * { transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
-        #loginScreen {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: #f5f5f5;
-        }
-        #mainContent { display: none; }
-    </style>
+    <title>Location Logs - Admin</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -26,177 +11,200 @@
      crossorigin=""/>
     
     <!-- Core styles -->
-    <link rel="stylesheet" href="style.css">
-    <!-- View logs specific styles -->
     <link rel="stylesheet" href="src/styles/view-logs.css">
-    <!-- Theme styles -->
-    <link id="themeStyles" rel="stylesheet" href="">
+    
+    <style>
+        /* Critical inline styles */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif; }
+        #loginScreen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+        #mainContent { display: none; }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-box h2 {
+            margin-bottom: 30px;
+            color: #1a1a2e;
+            text-align: center;
+            font-weight: 600;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+        .login-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .login-box button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .login-box button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        .login-box button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .login-error {
+            background: #fee;
+            color: #c00;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <!-- Error handling -->
-    <script>
-        window.onerror = function(msg, url, line, col, error) {
-            if (msg.includes('h1-check.js') || msg.includes('detectStore')) {
-                return true;
-            }
-            console.error('Uncaught error:', { message: msg, url: url, line: line, column: col, error: error });
-            return false;
-        };
-    </script>
-
+    <!-- Login Screen -->
     <div id="loginScreen">
-        <form id="loginForm" class="text-center">
-            <h2 class="mb-3">Location Logs Admin</h2>
-            <div class="mb-2">
-                <input type="email" id="email" placeholder="Email" required autocomplete="email">
-            </div>
-            <div class="mb-2">
-                <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
-            </div>
-            <div id="loginError" class="login-error" style="display:none;"></div>
+        <form id="loginForm" class="login-box">
+            <h2>Location Logs</h2>
+            <div id="loginError" class="login-error"></div>
+            <input type="email" id="email" placeholder="Email" required autocomplete="email">
+            <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
             <button type="submit" id="loginButton">Login</button>
         </form>
     </div>
-    
+
+    <!-- Main Content -->
     <div id="mainContent">
-        <nav class="nav-header">
-            <div class="nav-title">
-                Location Logs
-                <span id="versionDisplay" class="version-display"></span>
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="header-title">Location Logs</h1>
+                <span id="versionDisplay" class="version-tag"></span>
             </div>
-            <div class="nav-controls">
-                <div class="nav-group">
-                    <button class="button" id="refreshDataBtn">Refresh Data</button>
-                    <div class="auto-refresh">
-                        <input type="checkbox" id="autoRefresh">
-                        <label for="autoRefresh">Auto-refresh</label>
-                        <span id="refreshTimer" class="refresh-timer"></span>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <label for="themeSelect">Index Page Theme:</label>
+            <div class="header-right">
+                <button class="btn btn-primary" id="refreshDataBtn">
+                    <span class="btn-icon">Refresh</span>
+                </button>
+                <label class="auto-refresh-toggle">
+                    <input type="checkbox" id="autoRefresh">
+                    <span>Auto</span>
+                    <span id="refreshTimer" class="timer"></span>
+                </label>
+                <div class="theme-selector">
+                    <label>Theme:</label>
                     <select id="themeSelect">
                         <option value="westpac">Westpac</option>
                         <option value="winz">Work and Income NZ</option>
                         <option value="ird">Inland Revenue</option>
                         <option value="acc">ACC</option>
                     </select>
-                    <button class="button button-preview" id="previewThemeBtn" title="Preview theme">👁 Preview</button>
+                    <button class="btn btn-sm" id="previewThemeBtn" title="Preview">Preview</button>
                 </div>
-                <div class="nav-group">
-                    <span id="sessionTimer" class="session-timer"></span>
-                    <button class="button" id="testDiscordBtn" style="background:#5865F2;" title="Test Discord webhook">💬 Test Discord</button>
-                    <button class="button button-secondary" id="logoutButton">Logout</button>
-                </div>
+                <button class="btn btn-discord" id="testDiscordBtn" title="Test Discord">
+                    <span class="btn-icon">Discord</span>
+                </button>
+                <button class="btn btn-danger" id="logoutButton">Logout</button>
             </div>
-        </nav>
-        
-        <!-- Stats Cards Row -->
-        <div class="stats-row">
-            <div class="stat-card stat-locations">
-                <div class="stat-card-header">
-                    <span class="stat-card-title">Total Locations</span>
-                    <span class="stat-card-icon">📍</span>
-                </div>
-                <div class="stat-card-value" id="statTotalLocations">0</div>
-                <div class="stat-card-label">All time captured</div>
-            </div>
-            <div class="stat-card stat-active">
-                <div class="stat-card-header">
-                    <span class="stat-card-title">Active Sessions</span>
-                    <span class="stat-card-icon">🔴</span>
-                </div>
-                <div class="stat-card-value" id="statActiveSessions">0</div>
-                <div class="stat-card-label">Currently active</div>
-            </div>
-            <div class="stat-card stat-accuracy">
-                <div class="stat-card-header">
-                    <span class="stat-card-title">Avg Accuracy</span>
-                    <span class="stat-card-icon">🎯</span>
-                </div>
-                <div class="stat-card-value" id="statAvgAccuracy">--</div>
-                <div class="stat-card-label">Metres</div>
-            </div>
-            <div class="stat-card stat-theme">
-                <div class="stat-card-header">
-                    <span class="stat-card-title">Active Theme</span>
-                    <span class="stat-card-icon">🎨</span>
-                </div>
-                <div class="stat-card-value" id="statActiveTheme" style="font-size:20px;">--</div>
-                <div class="stat-card-label">Current index theme</div>
-            </div>
-            <div class="stat-card stat-recent">
-                <div class="stat-card-header">
-                    <span class="stat-card-title">Last Location</span>
-                    <span class="stat-card-icon">⏱️</span>
-                </div>
-                <div class="stat-card-value" id="statLastLocation" style="font-size:18px;">--</div>
-                <div class="stat-card-label">Time ago</div>
-            </div>
-        </div>
-        
-        <div id="errorMessage" class="error-message"></div>
-        <div id="toast" class="toast"></div>
-        
-        <!-- Theme Preview Modal -->
-        <div id="themePreviewModal" class="theme-preview-modal" style="display:none;">
-            <div class="theme-preview-overlay"></div>
-            <div class="theme-preview-content">
-                <div class="theme-preview-header">
-                    <h3>Theme Preview</h3>
-                    <button class="theme-preview-close" id="closePreviewBtn">&times;</button>
-                </div>
-                <iframe id="themePreviewFrame" class="theme-preview-frame"></iframe>
-            </div>
-        </div>
-        
-        <!-- Dashboard Content: Logs + Map -->
-        <div class="dashboard-content">
+        </header>
+
+        <!-- Error Banner -->
+        <div id="errorMessage" class="error-banner"></div>
+
+        <!-- Main Dashboard -->
+        <main class="dashboard">
             <!-- Logs Panel -->
-            <div class="logs-panel">
-                <div class="logs-header">
-                    <span class="logs-title">Location Feed</span>
-                    <div class="logs-controls">
-                        <div class="search-box">
-                            <input type="text" id="searchInput" placeholder="Search name, IP, phone...">
+            <section class="panel logs-panel">
+                <div class="panel-header">
+                    <h2>Location Feed</h2>
+                    <div class="panel-controls">
+                        <div class="search-wrapper">
+                            <span class="search-icon">Search</span>
+                            <input type="text" id="searchInput" placeholder="Search...">
                         </div>
-                        <button class="export-btn" id="exportCsvBtn">📥 CSV</button>
-                        <button class="export-btn" id="exportJsonBtn" style="background:#17a2b8;">📥 JSON</button>
+                        <button class="btn btn-sm btn-export" id="exportCsvBtn">CSV</button>
+                        <button class="btn btn-sm btn-export btn-json" id="exportJsonBtn">JSON</button>
                     </div>
                 </div>
-                <div class="logs-table-wrapper">
-                    <table class="logs logs-table">
+                <div class="table-container">
+                    <table class="data-table">
                         <thead>
                             <tr>
                                 <th class="sortable" data-sort="firstName">User</th>
-                                <th class="sortable" data-sort="timestamp">Timestamp</th>
-                                <th class="sortable" data-sort="ip">IP Address</th>
+                                <th class="sortable" data-sort="timestamp">Time</th>
+                                <th class="sortable" data-sort="ip">IP</th>
                                 <th>Location</th>
                                 <th class="sortable" data-sort="accuracy">Accuracy</th>
                                 <th class="sortable" data-sort="locationSource">Source</th>
-                                <th>Browser & Device</th>
+                                <th>Device</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="logsTable">
+                            <tr class="loading-row">
+                                <td colspan="8">
+                                    <div class="loading-spinner"></div>
+                                    <span>Loading locations...</span>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
-                <div class="pagination">
-                    <span class="pagination-info" id="paginationInfo">Showing 0 of 0</span>
-                    <div class="pagination-controls" id="paginationControls">
-                    </div>
+                <div class="panel-footer">
+                    <span id="paginationInfo" class="pagination-info">Loading...</span>
+                    <div id="paginationControls" class="pagination-controls"></div>
                 </div>
-            </div>
+            </section>
 
             <!-- Map Panel -->
-            <div class="map-panel">
-                <div class="map-header">
-                    <span class="map-title">Live Map</span>
+            <section class="panel map-panel">
+                <div class="panel-header">
+                    <h2>Live Map</h2>
+                    <span id="markerCount" class="marker-count"></span>
                 </div>
-                <div class="map">
+                <div class="map-container">
                     <div id="locationMap"></div>
+                    <div id="mapLoading" class="map-loading">
+                        <div class="loading-spinner"></div>
+                        <span>Loading map...</span>
+                    </div>
                 </div>
+            </section>
+        </main>
+
+        <!-- Toast -->
+        <div id="toast" class="toast"></div>
+
+        <!-- Theme Preview Modal -->
+        <div id="themePreviewModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Theme Preview</h3>
+                    <button id="closePreviewBtn" class="modal-close">X</button>
+                </div>
+                <iframe id="themePreviewFrame" class="preview-frame"></iframe>
             </div>
         </div>
     </div>
@@ -206,7 +214,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     
-    <!-- Firebase Configuration and Initialization -->
+    <!-- Firebase Configuration -->
     <script src="src/core/firebase-config.js"></script>
     <script type="module" src="src/core/firebase-init.js"></script>
     
@@ -215,24 +223,11 @@
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
 
-    <!-- Load themes configuration -->
+    <!-- Themes config -->
     <script src="themes/config.js"></script>
 
-    <!-- Load login functionality -->
-    <script type="module" src="view-logs.js"></script>
-
-    <!-- Initialize admin module -->
-    <script type="module">
-        window.firebaseLoaded.then(() => {
-            import('./src/features/admin/admin.js').then(module => {
-                window.admin = { 
-                    refreshData: module.refreshData,
-                    initializeAdmin: module.initializeAdmin
-                };
-            }).catch(error => {
-                console.error('Failed to load admin module:', error);
-            });
-        });
-    </script>
+    <!-- Main App -->
+    <script type="module" src="view-logs-new.js"></script>
 </body>
 </html>
+

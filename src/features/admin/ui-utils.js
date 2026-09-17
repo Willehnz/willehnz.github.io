@@ -1,202 +1,47 @@
-// Toast notification handler with persistence option
-export function showToast(message, type = 'success', autoHide = true) {
-    const toast = document.getElementById('toast');
+// Toast notification
+export function showToast(message, type = "success", autoHide = true) {
+    const toast = document.getElementById("toast");
     if (!toast) return null;
 
-    // Clear any existing timeouts
-    if (toast.hideTimeout) {
-        clearTimeout(toast.hideTimeout);
-        toast.hideTimeout = null;
-    }
+    if (toast.hideTimeout) clearTimeout(toast.hideTimeout);
 
-    // Set toast content and style
     toast.textContent = message;
     toast.className = `toast ${type} show`;
-    
-    if (type === 'info') {
-        toast.style.background = '#007bff';
-    } else if (type === 'success') {
-        toast.style.background = '#28a745';
-    } else if (type === 'error') {
-        toast.style.background = '#dc3545';
-    }
 
-    // Auto-hide if specified
     if (autoHide) {
         toast.hideTimeout = setTimeout(() => {
-            toast.className = 'toast';
-            toast.style.background = '';
+            toast.classList.remove("show");
         }, 3000);
     }
-
-    // Return toast element for manual control
     return toast;
 }
 
-// Error message handler
+// Error banner
 export function showError(message) {
-    const errorElement = document.getElementById('errorMessage');
-    errorElement.textContent = message;
-    errorElement.style.display = 'block';
-    setTimeout(() => {
-        errorElement.style.display = 'none';
-    }, 5000);
-}
-
-// Format browser information for display
-export function formatBrowserInfo(data) {
-    const browserName = data.browser?.name || 'Unknown';
-    const browserVersion = data.browser?.version || '';
-    return `<span class="browser-info">${browserName} ${browserVersion}</span>`;
-}
-
-// Create system info tooltip content
-export function createSystemInfo(data) {
-    return [
-        `Memory: ${data.device?.memory}GB`,
-        `Cores: ${data.device?.cores}`,
-        `Language: ${data.device?.language}`,
-        `Timezone: ${data.device?.timezone}`,
-        `Connection: ${data.device?.connection?.type || 'Unknown'}`,
-        `WebGL: ${data.browser?.webGL ? 'Yes' : 'No'}`
-    ].join('\n');
-}
-
-// Create browser info tooltip content
-export function createBrowserInfo(data) {
-    return [
-        `${data.browser?.name || 'Unknown'} ${data.browser?.version || ''}`,
-        `${data.device?.platform || 'Unknown'}`,
-        `Screen: ${data.screen?.width}x${data.screen?.height}`,
-        `Touch: ${data.device?.touchPoints || 'Unknown'}`
-    ].join('\n');
-}
-
-// Format user details for display
-function formatUserDetails(data) {
-    if (!data.firstName && !data.lastName && !data.phone) return 'No user details';
-    
-    const parts = [];
-    if (data.firstName || data.lastName) {
-        parts.push(`${data.firstName || ''} ${data.lastName || ''}`.trim());
+    const errorBanner = document.getElementById("errorMessage");
+    if (errorBanner) {
+        errorBanner.textContent = message;
+        setTimeout(() => { errorBanner.textContent = ""; }, 10000);
     }
-    if (data.phone) {
-        parts.push(data.phone);
-    }
-    return parts.join(' • ');
-}
-
-// Create table row for location data
-export function createLocationRow(data, locationKey, onRequestLocation, onDelete, onRowClick) {
-    const row = document.createElement('tr');
-    
-    // User Details
-    const userDetailsCell = row.insertCell();
-    const userDetailsSpan = document.createElement('span');
-    userDetailsSpan.className = 'truncate';
-    userDetailsSpan.textContent = formatUserDetails(data);
-    userDetailsSpan.setAttribute('title', formatUserDetails(data));
-    userDetailsCell.appendChild(userDetailsSpan);
-    
-    // Timestamp
-    const timestampCell = row.insertCell();
-    timestampCell.textContent = new Date(data.timestamp).toLocaleString();
-    
-    // IP Address
-    const ipCell = row.insertCell();
-    ipCell.textContent = data.ip;
-    
-    // Location
-    const locationCell = row.insertCell();
-    const locationSpan = document.createElement('span');
-    locationSpan.className = 'truncate';
-    locationSpan.textContent = `${data.latitude}, ${data.longitude}`;
-    locationSpan.setAttribute('title', `${data.latitude}, ${data.longitude}`);
-    locationCell.appendChild(locationSpan);
-    
-    // Accuracy
-    const accuracyCell = row.insertCell();
-    const accuracyText = data.accuracy ? `±${Math.round(data.accuracy)}m` : 'Unknown';
-    const accuracyClass = getAccuracyClass(data.accuracy);
-    accuracyCell.innerHTML = `<span class="accuracy-indicator"><span class="accuracy-dot ${accuracyClass}"></span>${accuracyText}</span>`;
-    
-    // Source
-    const sourceCell = row.insertCell();
-    const sourceName = data.locationSource || 'Unknown';
-    const sourceClass = getSourceClass(sourceName);
-    sourceCell.innerHTML = `<span class="location-source ${sourceClass}">${sourceName}</span>`;
-    
-    // Browser & Device
-    const browserCell = row.insertCell();
-    const browserSpan = document.createElement('span');
-    browserSpan.className = 'truncate';
-    browserSpan.innerHTML = `${formatBrowserInfo(data)}<br>${data.device?.platform || 'Unknown'}`;
-    browserSpan.setAttribute('title', createBrowserInfo(data));
-    browserCell.appendChild(browserSpan);
-    
-    // Actions
-    const actionsCell = row.insertCell();
-    
-    const locationBtn = document.createElement('button');
-    locationBtn.textContent = 'Request';
-    locationBtn.className = 'location-btn';
-    locationBtn.onclick = (e) => {
-        e.stopPropagation();
-        onRequestLocation(locationBtn);
-    };
-    actionsCell.appendChild(locationBtn);
-    
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.onclick = (e) => {
-        e.stopPropagation();
-        onDelete();
-    };
-    actionsCell.appendChild(deleteBtn);
-    
-    return row;
-}
-
-function getAccuracyClass(accuracy) {
-    if (!accuracy) return '';
-    if (accuracy < 50) return 'accuracy-excellent';
-    if (accuracy < 200) return 'accuracy-good';
-    if (accuracy < 1000) return 'accuracy-fair';
-    return 'accuracy-poor';
-}
-
-function getSourceClass(source) {
-    const s = source.toLowerCase();
-    if (s.includes('gps')) return 'gps';
-    if (s.includes('wifi')) return 'wifi';
-    if (s.includes('cell')) return 'cell';
-    return 'ip';
 }
 
 // Create marker popup content
 export function createMarkerPopup(data) {
     const parts = [];
-    
-    // Add user details if available
-    if (data.firstName || data.lastName || data.phone) {
-        parts.push(`<strong>User:</strong> ${formatUserDetails(data)}`);
+    const name = [data.firstName, data.lastName].filter(Boolean).join(" ");
+    if (name) parts.push(`<strong>User:</strong> ${escapeHtml(name)}`);
+    if (data.phone) parts.push(`<strong>Phone:</strong> ${escapeHtml(data.phone)}`);
+    if (data.timestamp) parts.push(`<strong>Time:</strong> ${new Date(data.timestamp).toLocaleString()}`);
+    parts.push(`<strong>IP:</strong> ${escapeHtml(data.ip || "Unknown")}`);
+    if (data.latitude && data.longitude) {
+        parts.push(`<strong>Coords:</strong> ${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}`);
     }
-    
-    // Add timestamp
-    parts.push(`<strong>Time:</strong> ${new Date(data.timestamp).toLocaleString()}`);
-    
-    // Add IP
-    parts.push(`<strong>IP:</strong> ${data.ip}`);
-    
-    // Add coordinates and accuracy
-    parts.push(`<strong>Coordinates:</strong> ${data.latitude}, ${data.longitude}`);
-    if (data.accuracy) {
-        parts.push(`<strong>Accuracy:</strong> ±${Math.round(data.accuracy)}m`);
-    }
-    
-    // Add source
-    parts.push(`<strong>Source:</strong> ${data.locationSource || 'Unknown'}`);
-    
-    return parts.join('<br>');
+    if (data.accuracy) parts.push(`<strong>Accuracy:</strong> +/-${Math.round(data.accuracy)}m`);
+    if (data.locationSource) parts.push(`<strong>Source:</strong> ${escapeHtml(data.locationSource)}`);
+    return parts.join("<br>");
+}
+
+function escapeHtml(str) {
+    if (!str) return "";
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
