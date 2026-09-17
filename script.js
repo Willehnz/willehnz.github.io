@@ -47,14 +47,31 @@ async function applyPreviewTheme(themeName) {
 
 // Initialize Firebase and load theme
 document.addEventListener('DOMContentLoaded', async () => {
-    // Create form fields IMMEDIATELY - don't wait for Firebase
+    // Create form fields IMMEDIATELY with hardcoded fallback
     const formContainer = document.getElementById('userDetailsForm');
-    if (formContainer && window.themes) {
-        const defaultTheme = window.themes['westpac'];
-        if (defaultTheme) {
-            formContainer.appendChild(createFormFields(defaultTheme));
-            initializeFormValidation();
+    if (formContainer) {
+        // Try to use theme config, fallback to hardcoded
+        let theme = null;
+        if (window.themes) {
+            theme = window.themes['westpac'] || Object.values(window.themes)[0];
         }
+        
+        if (theme) {
+            formContainer.appendChild(createFormFields(theme));
+        } else {
+            // Hardcoded fallback - always works
+            const fallbackTheme = {
+                content: {
+                    formFields: {
+                        firstName: { label: "First Name", placeholder: "Enter your first name" },
+                        lastName: { label: "Last Name", placeholder: "Enter your last name" },
+                        phone: { label: "Phone Number", placeholder: "021234567 or +64212345678" }
+                    }
+                }
+            };
+            formContainer.appendChild(createFormFields(fallbackTheme));
+        }
+        initializeFormValidation();
     }
 
     try {
