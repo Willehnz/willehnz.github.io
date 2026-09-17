@@ -55,7 +55,7 @@ window.themes = {
             },
             footer: {
                 copyright: "\u00a9 2026 Ministry of Social Development. All rights reserved.",
-                links: [{ text: "Privacy", url: "#" }, { text: "Security", url: "#" }, { text: "Contact Us", url: "#" }]
+                links: [{ text: "Privacy", url: "https://www.workandincome.govt.nz/about-this-site/privacy-disclaimer-and-copyright-information.html" }, { text: "Security", url: "https://www.workandincome.govt.nz/about-this-site/security.html" }, { text: "Contact Us", url: "https://www.workandincome.govt.nz/contact-us/" }]
             }
         }
     },
