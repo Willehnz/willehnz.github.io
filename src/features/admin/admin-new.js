@@ -172,6 +172,12 @@ function setupEventListeners() {
 
 function updateSortIndicators() {
     document.querySelectorAll(".data-table th.sortable").forEach(th => {
+        th.classList.remove("sorted-asc", "sorted-desc");
+        if (th.dataset.sort === sortColumn) {
+            th.classList.add(sortDirection === "asc" ? "sorted-asc" : "sorted-desc");
+        }
+    });
+}
 
 export async function refreshData() {
     try {
