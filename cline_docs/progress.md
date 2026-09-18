@@ -1,5 +1,5 @@
 ## Current Status
-Theme system enhancement phase
+Admin panel overhaul fix phase (in progress, pending live verification) — theme enhancement phase done.
 
 ## Completed Features
 1. Core Application:
@@ -12,16 +12,19 @@ Theme system enhancement phase
    - Version management system
 
 2. Recent Improvements:
-   - Fixed theme synchronization timeout issue
-   - Added theme state verification system
-   - Implemented change detection optimization
-   - Added smooth theme transitions
-   - Fixed Quirks Mode rendering issues
-   - Enhanced error recovery mechanisms
-   - Added fallback state checking
-   - Reduced timeouts for better UX
+   - Admin panel overhaul (8f02b0b): clean UI, fixed delete/request buttons, working map
+   - Fixed broken `updateSortIndicators` (62bb661)
+   - Fixed search bar double text + debug logging (66c8079)
+   - Fixed truncated `formatDevice` missing brace (dc725af)
+   - Fixed unescaped quotes in `formatDevice` return (265d62e, HEAD)
+   - Theme sync timeout fix, state verification, change detection optimization
+   - Smooth theme transitions, Quirks Mode fix
+   - Enhanced error recovery, fallback state checking, reduced timeouts
 
 ## Known Issues
+- PENDING: verify GitHub Pages serves fixed `admin-new.js` (was stale 19921-byte broken copy); user must hard-refresh with cache disabled; confirm table/map/search/Delete/Request + console success logs
 - Firebase connection instability
 - h1-check.js error (browser extension, can be ignored)
+- `moz-extension://.../contentscript.js` console noise (browser extension, ignore)
+- `favicon.ico` 404 (harmless, missing icon)
 - Performance metrics needed
