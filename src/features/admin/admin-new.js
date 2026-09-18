@@ -16,15 +16,16 @@ let sortDirection = "desc";
 let searchQuery = "";
 
 export async function initializeAdmin() {
-    logger.debug("Starting admin panel initialization...");
+    console.log("[Admin] Starting admin panel initialization...");
+    console.log("[Admin] Database available:", !!window.database);
     try {
         setupEventListeners();
         initializeMap();
         await refreshData();
         setupRealtimeListener();
-        logger.info("Admin panel initialized successfully");
+        console.log("[Admin] Admin panel initialized successfully");
     } catch (error) {
-        logger.error("Admin initialization error:", error);
+        console.error("[Admin] Admin initialization error:", error);
         UIUtils.showError("Initialization error: " + error.message);
     }
 }
@@ -180,14 +181,21 @@ function updateSortIndicators() {
 }
 
 export async function refreshData() {
+    const tbody = document.getElementById("logsTable");
     try {
+        console.log("[Admin] Refreshing data, database available:", !!window.database);
+        if (!window.database) {
+            throw new Error("Database not initialized");
+        }
         const locations = await DataManager.fetchLocations();
+        console.log("[Admin] Fetched", locations.length, "locations");
         allLocations = locations.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         applyFiltersAndRender();
         updateMapMarkers();
     } catch (error) {
-        logger.error("Error refreshing data:", error);
+        console.error("[Admin] Error refreshing data:", error);
         UIUtils.showToast("Failed to load data: " + error.message, "error");
+        if (tbody) tbody.innerHTML = `<tr class="empty-row"><td colspan="8">Error loading data: ${error.message}</td></tr>`;
     }
 }
 
@@ -378,8 +386,6 @@ async function testDiscord() {
     } catch (e) { UIUtils.showToast("Discord failed: " + e.message, "error"); }
     finally { if (btn) { btn.disabled = false; btn.innerHTML = "Discord"; } }
 }
-
-    const platform = loc.device?.platform || "Unknown";
 
 async function deleteLocation(key, btn) {
     if (!key) return;
