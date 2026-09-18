@@ -313,7 +313,7 @@ function formatDevice(loc) {
     const platform = loc.device?.platform || loc.platform || "";
     const ver = version ? " " + version : "";
     const plat = platform ? "<br>" + platform : "";
-    return "<span class="browser">" + browser + ver + "</span>" + plat;
+    return '<span class="browser">' + browser + ver + '</span>' + plat;
 }
 
 function renderPagination() {
