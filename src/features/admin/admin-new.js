@@ -310,6 +310,12 @@ function formatDevice(loc) {
     const browser = loc.browser?.name || "Unknown";
     const version = loc.browser?.version || "";
 
+    const platform = loc.device?.platform || loc.platform || "";
+    const ver = version ? " " + version : "";
+    const plat = platform ? "<br>" + platform : "";
+    return "<span class="browser">" + browser + ver + "</span>" + plat;
+}
+
 function renderPagination() {
     const totalPages = Math.ceil(filteredLocations.length / PAGE_SIZE);
     const info = document.getElementById("paginationInfo");
